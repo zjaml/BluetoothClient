@@ -1,4 +1,4 @@
-package kiny.io.bluetooth;
+package io.kiny.bluetooth;
 
 /**
  * Created by JZhao on 2/20/2017.

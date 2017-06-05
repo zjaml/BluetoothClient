@@ -1,4 +1,4 @@
-<manifest xmlns:android="http://schemas.android.com/apk/res/android" package="kiny.io.bluetooth">
+<manifest xmlns:android="http://schemas.android.com/apk/res/android" package="io.kiny.bluetooth">
     <uses-permission android:name="android.permission.BLUETOOTH" />
     <uses-permission android:name="android.permission.BLUETOOTH_ADMIN" />
     <application android:allowBackup="true" android:label="@string/app_name"

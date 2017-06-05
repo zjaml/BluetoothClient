@@ -1,4 +1,4 @@
-package kiny.io.bluetooth;
+package io.kiny.bluetooth;
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
