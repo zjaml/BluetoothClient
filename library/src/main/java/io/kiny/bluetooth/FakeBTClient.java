@@ -16,12 +16,14 @@ import java.util.Objects;
 public class FakeBTClient implements BluetoothClientInterface {
     private final String Tag = "FakeBTClient";
     private final Handler mHandler;
+    private final Boolean mSimulateDisconnection;
     private final SafeBroadcastReceiver mBluetoothBroadcastReceiver;
     private int mState;
 
-    public FakeBTClient(Handler handler) {
+    public FakeBTClient(Handler handler, Boolean simulateDisconnection) {
         mState = STATE_NONE;
         mHandler = handler;
+        mSimulateDisconnection = simulateDisconnection;
         mBluetoothBroadcastReceiver = new SafeBroadcastReceiver() {
             @Override
             public void onReceive(Context context, Intent intent) {
@@ -69,8 +71,10 @@ public class FakeBTClient implements BluetoothClientInterface {
                     // use following to simulate occasional disconnection.
                     //don't wait too long here as it jams the queue, preventing future AsyncTask from running.
                     //executeOnExecutor helps a bit.
-                    Thread.sleep(10000);
-                    setState(STATE_NONE);
+                    if(mSimulateDisconnection) {
+                        Thread.sleep(10000);
+                        setState(STATE_NONE);
+                    }
 
                 } catch (InterruptedException e) {
                     e.printStackTrace();
