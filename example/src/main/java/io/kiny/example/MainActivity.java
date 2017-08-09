@@ -33,6 +33,6 @@ public class MainActivity extends AppCompatActivity {
     }
 
     public void onCheckInClicked(View view) {
-        mLockerManager.requestToCheckIn(10);
+        mLockerManager.requestToCheckIn("10");
     }
 }

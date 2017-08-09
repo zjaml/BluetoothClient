@@ -1,18 +1,20 @@
 package io.kiny;
 
-import java.util.Collection;
+import android.text.TextUtils;
+
 import java.util.Date;
+import java.util.List;
 import java.util.Locale;
 
 public class LockerCommand {
     private int counter = 0;
     private String _id;
     private LockerCommandType _type;
-    private Collection<String> _doors;
+    private List<String> _doors;
     private boolean _allDoor;
     private Date _sent;
 
-    public LockerCommand(LockerCommandType type, Collection<String> doors, boolean allDoor) {
+    public LockerCommand(LockerCommandType type, List<String> doors, boolean allDoor) {
         _id = getIdAndIncrement();
         _type = type;
         _doors = doors;
@@ -28,12 +30,27 @@ public class LockerCommand {
         return id;
     }
 
-    public void recordSent(){
+    public void recordSent() {
         _sent = new Date();
     }
 
     @Override
     public String toString() {
-        return "";
+        switch (_type) {
+            case CheckIn:
+                return String.format("O%2sT", _doors.get(0));
+            case CheckOut:
+                return String.format("O%2sR", _doors.get(0));
+            case DoorStatus:
+                return _allDoor ? "D" : String.format("D&%s", TextUtils.join("&", _doors));
+            case EmptyStatus:
+                return  _allDoor ? "E" : String.format("E&%s", TextUtils.join("&", _doors));
+            case Charge:
+                return "LOW";
+            case Discharge:
+                return "HIGH";
+            default:
+                return "";
+        }
     }
 }

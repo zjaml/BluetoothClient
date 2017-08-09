@@ -96,7 +96,6 @@ public class FakeBTClient implements BluetoothClientInterface {
 
     @Override
     public void sendCommand(final String command) {
-        Log.d(Tag, String.format("Sending Command: %s", command));
         AsyncTask<Void, Void, Void> delayed = new AsyncTask<Void, Void, Void>() {
             @Override
             protected Void doInBackground(Void... voids) {

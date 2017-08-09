@@ -8,7 +8,6 @@ import android.os.Handler;
 import android.os.Message;
 import android.util.Log;
 
-import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.Queue;
@@ -64,13 +63,13 @@ public class LockerManager {
         mApplicationContext = applicationContext;
         LockerResponseHandler handler = new LockerResponseHandler();
         if (useSimulator) {
-            mBluetoothClient = new FakeBTClient(handler, true);
+            mBluetoothClient = new FakeBTClient(handler, false);
         } else {
             mBluetoothClient = new BluetoothClient(handler, targetDeviceName);
         }
     }
 
-    public static void start() {
+    public void start() {
         if (mBluetoothClient != null && mBluetoothClient.getState() == BluetoothClient.STATE_NONE) {
             mBluetoothClient.connect();
             mBluetoothClient.getBluetoothBroadcastReceiver()
@@ -79,7 +78,7 @@ public class LockerManager {
         commandQueue.clear();
     }
 
-    public static void stop() {
+    public void stop() {
         if (mBluetoothClient != null) {
             mBluetoothClient.disconnect();
             mBluetoothClient.getBluetoothBroadcastReceiver().safeUnregister(mApplicationContext);
@@ -94,7 +93,7 @@ public class LockerManager {
         return mBluetoothClient != null && mBluetoothClient.getState() == BluetoothClientInterface.STATE_CONNECTED;
     }
 
-    public static void queryDoorStatus(Collection<String> doors, boolean allDoor) {
+    public static void queryDoorStatus(List<String> doors, boolean allDoor) {
         LockerCommand command = new LockerCommand(LockerCommandType.DoorStatus, doors, allDoor);
         processCommand(command);
     }
@@ -113,7 +112,7 @@ public class LockerManager {
 
     public static void requestToCheckIn(String compartmentNumber) {
         if (isBtConnected()) {
-            Collection<String> doors = Collections.singletonList(compartmentNumber);
+            List<String> doors = Collections.singletonList(compartmentNumber);
             LockerCommand command = new LockerCommand(LockerCommandType.CheckIn, doors, true);
             processCommand(command);
         }
