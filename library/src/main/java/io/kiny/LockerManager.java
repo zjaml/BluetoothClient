@@ -1,11 +1,13 @@
 package io.kiny;
 
+import android.annotation.SuppressLint;
 import android.app.Application;
 import android.bluetooth.BluetoothDevice;
 import android.content.Context;
 import android.content.IntentFilter;
 import android.os.Handler;
 import android.os.Message;
+import android.util.Log;
 
 import java.util.Locale;
 
@@ -21,21 +23,25 @@ import io.kiny.bluetooth.FakeBTClient;
 
 public class LockerManager {
     private static BluetoothClientInterface mBluetoothClient;
-    private Context mApplicationContext;
+    @SuppressLint("StaticFieldLeak")
+    private static Context mApplicationContext;
 
     private static class LockerResponseHandler extends Handler {
         public void handleMessage(Message msg) {
             switch (msg.what) {
                 case Constants.MESSAGE_CONNECTION_LOST:
+                    Log.d("LockerManager", "connection lost");
                     // reconnect since connection is lost
                     if (mBluetoothClient != null) {
                         mBluetoothClient.connect();
                     }
                     break;
                 case Constants.MESSAGE_CONNECTED:
+                    Log.d("LockerManager", "connected");
                     break;
                 case Constants.MESSAGE_INCOMING_MESSAGE:
                     String message = (String) msg.obj;
+                    Log.d("LockerManager", String.format("incoming response:%s", message));
                     break;
             }
         }
@@ -46,7 +52,7 @@ public class LockerManager {
         mApplicationContext = applicationContext;
         LockerResponseHandler handler = new LockerResponseHandler();
         if (useSimulator) {
-            mBluetoothClient = new FakeBTClient(handler, false);
+            mBluetoothClient = new FakeBTClient(handler, true);
         } else {
             mBluetoothClient = new BluetoothClient(handler, targetDeviceName);
         }
@@ -71,9 +77,10 @@ public class LockerManager {
         return mBluetoothClient != null && mBluetoothClient.getState() == BluetoothClientInterface.STATE_CONNECTED;
     }
 
-    public void RequestToCheckin(int compartmentNumber) {
+    public void requestToCheckin(int compartmentNumber) {
         if (isBtConnected()) {
             String command = String.format(Locale.getDefault(), "O%02dT", compartmentNumber);
+            Log.d("LockerManager", String.format("sending command:%s", command));
             mBluetoothClient.sendCommand(command);
         }
     }
