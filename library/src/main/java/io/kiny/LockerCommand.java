@@ -12,6 +12,7 @@ public class LockerCommand {
     private LockerCommandType _type;
     private List<String> _doors;
     private boolean _allDoor;
+    private int _lifeSpanInSeconds;
     private Date _sent;
 
     public LockerCommand(LockerCommandType type, List<String> doors, boolean allDoor) {
@@ -19,6 +20,7 @@ public class LockerCommand {
         _type = type;
         _doors = doors;
         _allDoor = allDoor;
+        _lifeSpanInSeconds = 60;
     }
 
     private synchronized String getIdAndIncrement() {
@@ -34,6 +36,12 @@ public class LockerCommand {
         _sent = new Date();
     }
 
+    public boolean expired() {
+        long now = new Date().getTime();
+        long sent = _sent.getTime();
+        return sent + _lifeSpanInSeconds * 1000 > now;
+    }
+
     @Override
     public String toString() {
         switch (_type) {
@@ -44,7 +52,7 @@ public class LockerCommand {
             case DoorStatus:
                 return _allDoor ? "D" : String.format("D&%s", TextUtils.join("&", _doors));
             case EmptyStatus:
-                return  _allDoor ? "E" : String.format("E&%s", TextUtils.join("&", _doors));
+                return _allDoor ? "E" : String.format("E&%s", TextUtils.join("&", _doors));
             case Charge:
                 return "LOW";
             case Discharge:

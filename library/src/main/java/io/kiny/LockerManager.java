@@ -32,6 +32,7 @@ public class LockerManager {
     private static List<String> openDoors = null;
     private static Queue<LockerCommand> commandQueue = new ConcurrentLinkedDeque<>();
     private static LockerCommand currentCommand = null;
+    private static TimeoutCommandTriggerThread timeoutCommandTriggerThread = null;
 
     private static class LockerResponseHandler extends Handler {
         public void handleMessage(Message msg) {
@@ -53,6 +54,15 @@ public class LockerManager {
                 case Constants.MESSAGE_INCOMING_MESSAGE:
                     String message = (String) msg.obj;
                     Log.d("LockerManager", String.format("incoming response:%s", message));
+                    if(message.matches(LockerResponse.RESPONSE_PATTERN)){
+                        LockerResponse response = new LockerResponse(message);
+                        //todo: rid of current command
+
+                    }
+                    // Dequeue the current command if its ID matches the command ID in the response.
+                    // If ack is received after a check in/ checkout command, mark the door as open.
+                    // If the queue becomes empty, and there's open door, wait for half a second,
+                    // enqueue and immediately fire the door query command for the opened doors.
                     break;
             }
         }
@@ -76,6 +86,11 @@ public class LockerManager {
                     .safeRegister(mApplicationContext, new IntentFilter(BluetoothDevice.ACTION_ACL_DISCONNECTED));
         }
         commandQueue.clear();
+        if (timeoutCommandTriggerThread != null) {
+            timeoutCommandTriggerThread.cancel();
+        }
+        timeoutCommandTriggerThread = new TimeoutCommandTriggerThread();
+        timeoutCommandTriggerThread.start();
     }
 
     public void stop() {
@@ -87,6 +102,10 @@ public class LockerManager {
         // clear open doors so that the next time it gets connected, it will re-query the door status.
         openDoors = null;
         currentCommand = null;
+        if (timeoutCommandTriggerThread != null) {
+            timeoutCommandTriggerThread.cancel();
+            timeoutCommandTriggerThread = null;
+        }
     }
 
     private static boolean isBtConnected() {
@@ -117,4 +136,34 @@ public class LockerManager {
             processCommand(command);
         }
     }
+
+
+    /**
+     * Constant loop and check whether the current command expired by compare the command's sent time and now.
+     * If the current command expired, remove it and send the next command in queue to the board.
+     * Todo: maybe able to optimize CPU usage by killing this thread when not needed and only let it run when it becomes necessary
+     */
+    private class TimeoutCommandTriggerThread extends Thread {
+        private boolean mmStopSignal = false;
+
+        public void run() {
+            while (!mmStopSignal) {
+                try {
+                    if (currentCommand != null && currentCommand.expired()) {
+                        currentCommand = commandQueue.poll();
+                        if (currentCommand != null)
+                            processCommand(currentCommand);
+                    }
+                    Thread.sleep(500);
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+            }
+        }
+
+        public void cancel() {
+            mmStopSignal = true;
+        }
+    }
+
 }
