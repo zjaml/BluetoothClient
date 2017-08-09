@@ -10,6 +10,7 @@ import android.util.Log;
 
 import java.util.Collections;
 import java.util.List;
+import java.util.Objects;
 import java.util.Queue;
 import java.util.concurrent.ConcurrentLinkedDeque;
 
@@ -54,15 +55,19 @@ public class LockerManager {
                 case Constants.MESSAGE_INCOMING_MESSAGE:
                     String message = (String) msg.obj;
                     Log.d("LockerManager", String.format("incoming response:%s", message));
-                    if(message.matches(LockerResponse.RESPONSE_PATTERN)){
-                        LockerResponse response = new LockerResponse(message);
-                        //todo: rid of current command
-
-                    }
                     // Dequeue the current command if its ID matches the command ID in the response.
                     // If ack is received after a check in/ checkout command, mark the door as open.
-                    // If the queue becomes empty, and there's open door, wait for half a second,
-                    // enqueue and immediately fire the door query command for the opened doors.
+                    // If the queue becomes empty, and there's open door, enqueue a door query command for the opened doors.
+                    if (message.matches(LockerResponse.RESPONSE_PATTERN)) {
+                        LockerResponse response = new LockerResponse(message);
+                        if (currentCommand != null && Objects.equals(response.getId(), currentCommand.getId())) {
+                            //remove the current command and dequeue
+                            currentCommand = commandQueue.poll();
+                            if(currentCommand==null && openDoors!=null && openDoors.size() > 0){
+                                queueCommand(new LockerCommand(LockerCommandType.DoorStatus, openDoors, false));
+                            }//else, the current command will be fired on the next loop.
+                        }
+                    }
                     break;
             }
         }
@@ -114,26 +119,33 @@ public class LockerManager {
 
     public static void queryDoorStatus(List<String> doors, boolean allDoor) {
         LockerCommand command = new LockerCommand(LockerCommandType.DoorStatus, doors, allDoor);
-        processCommand(command);
+        queueCommand(command);
     }
 
-    private static synchronized void processCommand(LockerCommand command) {
+    private static synchronized void queueCommand(LockerCommand command) {
         //using synchronized to protect currentCommand
-        if (currentCommand == null && isBtConnected()) {
+        if (currentCommand == null) {
             currentCommand = command;
-            Log.d("LockerManager", String.format("sending command:%s", command.toString()));
-            mBluetoothClient.sendCommand(command.toString());
-            command.recordSent();
         } else {
             commandQueue.offer(command);
         }
+    }
+
+    private static void sendCommand(LockerCommand command) {
+        //intentionally drop the command if disconnected,
+        if (isBtConnected()) {
+            Log.d("LockerManager", String.format("sending command:%s", command.toString()));
+            mBluetoothClient.sendCommand(command.toString());
+        }
+        // so that the queue can always be consumed fast.
+        command.recordSent();
     }
 
     public static void requestToCheckIn(String compartmentNumber) {
         if (isBtConnected()) {
             List<String> doors = Collections.singletonList(compartmentNumber);
             LockerCommand command = new LockerCommand(LockerCommandType.CheckIn, doors, true);
-            processCommand(command);
+            queueCommand(command);
         }
     }
 
@@ -149,10 +161,14 @@ public class LockerManager {
         public void run() {
             while (!mmStopSignal) {
                 try {
-                    if (currentCommand != null && currentCommand.expired()) {
-                        currentCommand = commandQueue.poll();
-                        if (currentCommand != null)
-                            processCommand(currentCommand);
+                    if (currentCommand != null) {
+                        if (currentCommand.getSent() == null) {
+                            sendCommand(currentCommand);
+                        } else if (currentCommand.expired()) {
+                            currentCommand = commandQueue.poll();
+                            if (currentCommand != null)
+                                sendCommand(currentCommand);
+                        }
                     }
                     Thread.sleep(500);
                 } catch (InterruptedException e) {

@@ -61,4 +61,12 @@ public class LockerCommand {
                 return "";
         }
     }
+
+    public String getId() {
+        return _id;
+    }
+
+    public Date getSent(){
+        return _sent;
+    }
 }
