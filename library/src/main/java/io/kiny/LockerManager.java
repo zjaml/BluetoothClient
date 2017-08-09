@@ -1,7 +1,6 @@
 package io.kiny;
 
 import android.annotation.SuppressLint;
-import android.app.Application;
 import android.bluetooth.BluetoothDevice;
 import android.content.Context;
 import android.content.IntentFilter;
@@ -9,7 +8,11 @@ import android.os.Handler;
 import android.os.Message;
 import android.util.Log;
 
-import java.util.Locale;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.List;
+import java.util.Queue;
+import java.util.concurrent.ConcurrentLinkedDeque;
 
 import io.kiny.bluetooth.BluetoothClient;
 import io.kiny.bluetooth.BluetoothClientInterface;
@@ -21,10 +24,15 @@ import io.kiny.bluetooth.FakeBTClient;
  * Manage Locker
  */
 
+
 public class LockerManager {
     private static BluetoothClientInterface mBluetoothClient;
     @SuppressLint("StaticFieldLeak")
     private static Context mApplicationContext;
+
+    private static List<String> openDoors = null;
+    private static Queue<LockerCommand> commandQueue = new ConcurrentLinkedDeque<>();
+    private static LockerCommand currentCommand = null;
 
     private static class LockerResponseHandler extends Handler {
         public void handleMessage(Message msg) {
@@ -38,6 +46,10 @@ public class LockerManager {
                     break;
                 case Constants.MESSAGE_CONNECTED:
                     Log.d("LockerManager", "connected");
+                    // query open doors if don't know it yet.
+                    if (openDoors == null) {
+                        queryDoorStatus(null, true);
+                    }
                     break;
                 case Constants.MESSAGE_INCOMING_MESSAGE:
                     String message = (String) msg.obj;
@@ -58,30 +70,52 @@ public class LockerManager {
         }
     }
 
-    public void start() {
+    public static void start() {
         if (mBluetoothClient != null && mBluetoothClient.getState() == BluetoothClient.STATE_NONE) {
             mBluetoothClient.connect();
             mBluetoothClient.getBluetoothBroadcastReceiver()
                     .safeRegister(mApplicationContext, new IntentFilter(BluetoothDevice.ACTION_ACL_DISCONNECTED));
         }
+        commandQueue.clear();
     }
 
-    public void stop() {
+    public static void stop() {
         if (mBluetoothClient != null) {
             mBluetoothClient.disconnect();
             mBluetoothClient.getBluetoothBroadcastReceiver().safeUnregister(mApplicationContext);
         }
+        commandQueue.clear();
+        // clear open doors so that the next time it gets connected, it will re-query the door status.
+        openDoors = null;
+        currentCommand = null;
     }
 
-    private boolean isBtConnected() {
+    private static boolean isBtConnected() {
         return mBluetoothClient != null && mBluetoothClient.getState() == BluetoothClientInterface.STATE_CONNECTED;
     }
 
-    public void requestToCheckin(int compartmentNumber) {
+    public static void queryDoorStatus(Collection<String> doors, boolean allDoor) {
+        LockerCommand command = new LockerCommand(LockerCommandType.DoorStatus, doors, allDoor);
+        processCommand(command);
+    }
+
+    private static synchronized void processCommand(LockerCommand command) {
+        //using synchronized to protect currentCommand
+        if (currentCommand == null && isBtConnected()) {
+            currentCommand = command;
+            Log.d("LockerManager", String.format("sending command:%s", command.toString()));
+            mBluetoothClient.sendCommand(command.toString());
+            command.recordSent();
+        } else {
+            commandQueue.offer(command);
+        }
+    }
+
+    public static void requestToCheckIn(String compartmentNumber) {
         if (isBtConnected()) {
-            String command = String.format(Locale.getDefault(), "O%02dT", compartmentNumber);
-            Log.d("LockerManager", String.format("sending command:%s", command));
-            mBluetoothClient.sendCommand(command);
+            Collection<String> doors = Collections.singletonList(compartmentNumber);
+            LockerCommand command = new LockerCommand(LockerCommandType.CheckIn, doors, true);
+            processCommand(command);
         }
     }
 }

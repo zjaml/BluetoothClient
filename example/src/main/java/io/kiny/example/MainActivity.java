@@ -5,8 +5,6 @@ import android.os.Bundle;
 import android.view.View;
 import android.widget.Button;
 
-import java.util.concurrent.locks.Lock;
-
 import io.kiny.LockerManager;
 
 public class MainActivity extends AppCompatActivity {
@@ -35,6 +33,6 @@ public class MainActivity extends AppCompatActivity {
     }
 
     public void onCheckInClicked(View view) {
-        mLockerManager.requestToCheckin(10);
+        mLockerManager.requestToCheckIn(10);
     }
 }
