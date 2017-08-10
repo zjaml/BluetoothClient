@@ -49,7 +49,7 @@ public class LockerManager {
                     Log.d("LockerManager", "connected");
                     // query open doors if don't know it yet.
                     if (openDoors == null) {
-                        queryDoorStatus(null, true);
+                        queryBoxStatus(null);
                     }
                     break;
                 case Constants.MESSAGE_INCOMING_MESSAGE:
@@ -63,8 +63,8 @@ public class LockerManager {
                         if (currentCommand != null && Objects.equals(response.getId(), currentCommand.getId())) {
                             //remove the current command and dequeue
                             currentCommand = commandQueue.poll();
-                            if(currentCommand==null && openDoors!=null && openDoors.size() > 0){
-                                queueCommand(new LockerCommand(LockerCommandType.DoorStatus, openDoors, false));
+                            if (currentCommand == null && openDoors != null && openDoors.size() > 0) {
+                                queueCommand(new LockerCommand(LockerCommandType.BoxStatus, openDoors));
                             }//else, the current command will be fired on the next loop.
                         }
                     }
@@ -117,8 +117,8 @@ public class LockerManager {
         return mBluetoothClient != null && mBluetoothClient.getState() == BluetoothClientInterface.STATE_CONNECTED;
     }
 
-    public static void queryDoorStatus(List<String> doors, boolean allDoor) {
-        LockerCommand command = new LockerCommand(LockerCommandType.DoorStatus, doors, allDoor);
+    public static void queryBoxStatus(List<String> boxes) {
+        LockerCommand command = new LockerCommand(LockerCommandType.BoxStatus, boxes);
         queueCommand(command);
     }
 
@@ -144,7 +144,7 @@ public class LockerManager {
     public static void requestToCheckIn(String compartmentNumber) {
         if (isBtConnected()) {
             List<String> doors = Collections.singletonList(compartmentNumber);
-            LockerCommand command = new LockerCommand(LockerCommandType.CheckIn, doors, true);
+            LockerCommand command = new LockerCommand(LockerCommandType.CheckIn, doors);
             queueCommand(command);
         }
     }

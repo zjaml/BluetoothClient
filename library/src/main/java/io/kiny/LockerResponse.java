@@ -17,8 +17,6 @@ public class LockerResponse {
     private List<BoxStatus> boxStatusList;
 
     public LockerResponse(String response) {
-        // must be in format ID:Type[Door], like '01:A01'
-        // Create a Pattern object
         Pattern r = Pattern.compile(RESPONSE_PATTERN);
         // Now create matcher object.
         Matcher m = r.matcher(response);

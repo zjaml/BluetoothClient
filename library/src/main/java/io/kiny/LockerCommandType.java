@@ -7,8 +7,7 @@ package io.kiny;
 public enum LockerCommandType {
     CheckIn,
     CheckOut,
-    DoorStatus,
-    EmptyStatus,
+    BoxStatus,
     Charge,
     Discharge
 }
