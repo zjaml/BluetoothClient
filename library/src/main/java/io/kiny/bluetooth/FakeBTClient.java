@@ -9,8 +9,11 @@ import android.util.Log;
 import android.widget.Switch;
 
 import java.util.ArrayList;
+import java.util.Date;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.Objects;
 
 import io.kiny.BoxStatus;
@@ -19,7 +22,7 @@ import io.kiny.LockerResponse;
 
 /**
  * Created by JZhao on 2/20/2017.
- *  Locker simulator
+ * Locker simulator
  */
 
 //todo: simulate door closing by setting open time for each door.
@@ -29,6 +32,10 @@ public class FakeBTClient implements BluetoothClientInterface {
     private final Boolean mSimulateDisconnection;
     private final SafeBroadcastReceiver mBluetoothBroadcastReceiver;
     private int mState;
+    private Date connected;
+
+    private Map<Integer, Integer> openDoors;
+
 
     public FakeBTClient(Handler handler, Boolean simulateDisconnection) {
         mState = STATE_NONE;
@@ -43,6 +50,10 @@ public class FakeBTClient implements BluetoothClientInterface {
                 }
             }
         };
+        openDoors = new HashMap<>();
+        openDoors.put(5, 30000);
+        openDoors.put(10, 20000);
+        openDoors.put(29, 60000);
     }
 
     @Override
@@ -63,6 +74,7 @@ public class FakeBTClient implements BluetoothClientInterface {
             Log.d(Tag, "BT Connection Lost");
         }
         if (mState != STATE_CONNECTED && state == STATE_CONNECTED) {
+            connected = new Date();
             mHandler.obtainMessage(Constants.MESSAGE_CONNECTED, state).sendToTarget();
             Log.d(Tag, "BT Connection established");
         }
@@ -133,10 +145,15 @@ public class FakeBTClient implements BluetoothClientInterface {
                                 for (int i = 0; i < 30; i++) {
                                     // set 05 29 as open
                                     String status;
-                                    if (i % 3 == 0) {
+                                    if (openDoors.containsKey(i)) {
+                                        int timeToClose = openDoors.get(i);
+                                        if (timeToClose + connected.getTime() < (new Date()).getTime()) {
+                                            status = BoxStatus.BOX_FULL;
+                                        } else {
+                                            status = BoxStatus.BOX_OPEN;
+                                        }
+                                    } else if (i % 3 == 0) {
                                         status = BoxStatus.BOX_EMPTY;
-                                    } else if (i == 5 || i == 29) {
-                                        status = BoxStatus.BOX_OPEN;
                                     } else {
                                         status = BoxStatus.BOX_FULL;
                                     }
