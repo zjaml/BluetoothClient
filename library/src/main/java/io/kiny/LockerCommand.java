@@ -18,14 +18,14 @@ public class LockerCommand {
     public static final String COMMAND_TYPE_CHARGE = "L";
     private int counter = 0;
     private String _id;
-    private LockerCommandType _type;
+    private String _type;
     private List<String> _boxes;
     private int _lifeSpanInSeconds;
     private Date _sent;
 
     public static final String COMMAND_PATTERN = "(\\d{2}):(\\w)(.*)";
 
-    public LockerCommand(LockerCommandType type, List<String> boxes) {
+    public LockerCommand(String type, List<String> boxes) {
         _id = getIdAndIncrement();
         _type = type;
         _boxes = boxes;
@@ -38,26 +38,9 @@ public class LockerCommand {
         Matcher m = r.matcher(command);
         if (m.find()) {
             _id = m.group(1);
-            _type = getType(m.group(2));
+            _type = m.group(2);
             String[] boxes = m.group(3).split(BOX_SEPARATOR);
             _boxes = Arrays.asList(boxes);
-        }
-    }
-
-    private LockerCommandType getType(String type) {
-        switch (type) {
-            case COMMAND_TYPE_CHECK_IN:
-                return LockerCommandType.CheckIn;
-            case COMMAND_TYPE_CHECK_OUT:
-                return LockerCommandType.CheckOut;
-            case COMMAND_TYPE_BOX_STATUS:
-                return LockerCommandType.BoxStatus;
-            case COMMAND_TYPE_DISCHARGE:
-                return LockerCommandType.Discharge;
-            case COMMAND_TYPE_CHARGE:
-                return LockerCommandType.Charge;
-            default:
-                return null;
         }
     }
 
@@ -82,21 +65,11 @@ public class LockerCommand {
 
     @Override
     public String toString() {
-        switch (_type) {
-            case CheckIn:
-            case CheckOut:
-                return String.format("%s:%s%2s", _id, _type, _boxes.get(0));
-            case BoxStatus:
-                return String.format("%s:%s%s", _id, _type, getBoxes());
-            case Charge:
-            case Discharge:
-                return String.format("%s:%s", _id, _type);
-            default:
-                return "";
-        }
+        return String.format("%s:%s%s", _id, _type, getBoxesString());
     }
 
-    private String getBoxes() {
+
+    private String getBoxesString() {
         if (_boxes != null) {
             return TextUtils.join(BOX_SEPARATOR, _boxes);
         }
@@ -105,6 +78,18 @@ public class LockerCommand {
 
     public String getId() {
         return _id;
+    }
+
+    public String getType() {
+        return _type;
+    }
+
+    public List<String> getBoxes() {
+        return _boxes;
+    }
+
+    public boolean hasBoxes() {
+        return _boxes != null && _boxes.size() > 0;
     }
 
     public Date getSent() {

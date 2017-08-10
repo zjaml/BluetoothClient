@@ -64,7 +64,7 @@ public class LockerManager {
                             //remove the current command and dequeue
                             currentCommand = commandQueue.poll();
                             if (currentCommand == null && openDoors != null && openDoors.size() > 0) {
-                                queueCommand(new LockerCommand(LockerCommandType.BoxStatus, openDoors));
+                                queueCommand(new LockerCommand(LockerCommand.COMMAND_TYPE_BOX_STATUS, openDoors));
                             }//else, the current command will be fired on the next loop.
                         }
                     }
@@ -118,7 +118,7 @@ public class LockerManager {
     }
 
     public static void queryBoxStatus(List<String> boxes) {
-        LockerCommand command = new LockerCommand(LockerCommandType.BoxStatus, boxes);
+        LockerCommand command = new LockerCommand(LockerCommand.COMMAND_TYPE_BOX_STATUS, boxes);
         queueCommand(command);
     }
 
@@ -144,7 +144,7 @@ public class LockerManager {
     public static void requestToCheckIn(String compartmentNumber) {
         if (isBtConnected()) {
             List<String> doors = Collections.singletonList(compartmentNumber);
-            LockerCommand command = new LockerCommand(LockerCommandType.CheckIn, doors);
+            LockerCommand command = new LockerCommand(LockerCommand.COMMAND_TYPE_CHECK_IN, doors);
             queueCommand(command);
         }
     }

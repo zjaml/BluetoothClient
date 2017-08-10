@@ -6,8 +6,16 @@ import android.content.Intent;
 import android.os.AsyncTask;
 import android.os.Handler;
 import android.util.Log;
+import android.widget.Switch;
 
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Locale;
 import java.util.Objects;
+
+import io.kiny.BoxStatus;
+import io.kiny.LockerCommand;
+import io.kiny.LockerResponse;
 
 /**
  * Created by JZhao on 2/20/2017.
@@ -71,7 +79,7 @@ public class FakeBTClient implements BluetoothClientInterface {
                     // use following to simulate occasional disconnection.
                     //don't wait too long here as it jams the queue, preventing future AsyncTask from running.
                     //executeOnExecutor helps a bit.
-                    if(mSimulateDisconnection) {
+                    if (mSimulateDisconnection) {
                         Thread.sleep(10000);
                         setState(STATE_NONE);
                     }
@@ -101,21 +109,52 @@ public class FakeBTClient implements BluetoothClientInterface {
             protected Void doInBackground(Void... voids) {
                 try {
                     Thread.sleep(500);
-                    //simulate acknowledge.
-                    mHandler.obtainMessage(Constants.MESSAGE_INCOMING_MESSAGE, "A").sendToTarget();
-                    Thread.sleep(5000);
-                    if (command.endsWith("T")) {
-                        String box = command.substring(1, 3);
-                        //simulate door lock
-                        //40% chance of checkin with nothing.
-                        String emptyFlag = (Math.random() * 10) > 6 ? "E" : "F";
-                        mHandler.obtainMessage(Constants.MESSAGE_INCOMING_MESSAGE, String.format("%s%2s", emptyFlag, box)).sendToTarget();
-                    }else if(command.endsWith("R")){
-                        String box = command.substring(1, 3);
-                        //simulate door lock
-                        //40% chance of checkin with nothing.
-                        String emptyFlag = (Math.random() * 10) > 6 ? "F" : "E";
-                        mHandler.obtainMessage(Constants.MESSAGE_INCOMING_MESSAGE, String.format("%s%2s", emptyFlag, box)).sendToTarget();
+                    LockerCommand currentCommand = new LockerCommand(command);
+                    switch (currentCommand.getType()) {
+                        case LockerCommand.COMMAND_TYPE_CHECK_IN:
+                        case LockerCommand.COMMAND_TYPE_CHECK_OUT: {
+                            LockerResponse response = new LockerResponse(currentCommand.getId(), LockerResponse.RESPONSE_TYPE_BOX_OPEN, null);
+                            mHandler.obtainMessage(Constants.MESSAGE_INCOMING_MESSAGE, response.toString()).sendToTarget();
+                            break;
+                        }
+                        case LockerCommand.COMMAND_TYPE_BOX_STATUS: {
+                            if (currentCommand.hasBoxes()) {
+                                List<BoxStatus> boxStatusList = new ArrayList<>();
+                                List<String> boxes = currentCommand.getBoxes();
+                                for (String box : boxes) {
+                                    boxStatusList.add(new BoxStatus(box, BoxStatus.BOX_OPEN));
+                                }
+                                LockerResponse response = new LockerResponse(currentCommand.getId(), LockerResponse.RESPONSE_TYPE_BOX_STATUS, boxStatusList);
+                                mHandler.obtainMessage(Constants.MESSAGE_INCOMING_MESSAGE, response.toString()).sendToTarget();
+                            } else {
+                                List<BoxStatus> boxStatusList = new ArrayList<>();
+                                for (int i = 0; i < 30; i++) {
+                                    // set 05 29 as open
+                                    String status;
+                                    if (i % 3 == 0) {
+                                        status = BoxStatus.BOX_EMPTY;
+                                    } else if (i == 5 || i == 29) {
+                                        status = BoxStatus.BOX_OPEN;
+                                    } else {
+                                        status = BoxStatus.BOX_FULL;
+                                    }
+                                    boxStatusList.add(new BoxStatus(String.format(Locale.US, "%2d", i), status));
+                                    LockerResponse response = new LockerResponse(currentCommand.getId(), LockerResponse.RESPONSE_TYPE_BOX_STATUS, boxStatusList);
+                                    mHandler.obtainMessage(Constants.MESSAGE_INCOMING_MESSAGE, response.toString()).sendToTarget();
+                                }
+                            }
+                            break;
+                        }
+                        case LockerCommand.COMMAND_TYPE_CHARGE: {
+                            LockerResponse response = new LockerResponse(currentCommand.getId(), LockerResponse.RESPONSE_TYPE_CHARGEING, null);
+                            mHandler.obtainMessage(Constants.MESSAGE_INCOMING_MESSAGE, response.toString()).sendToTarget();
+                            break;
+                        }
+                        case LockerCommand.COMMAND_TYPE_DISCHARGE: {
+                            LockerResponse response = new LockerResponse(currentCommand.getId(), LockerResponse.RESPONSE_TYPE_DISCHARGEING, null);
+                            mHandler.obtainMessage(Constants.MESSAGE_INCOMING_MESSAGE, response.toString()).sendToTarget();
+                            break;
+                        }
                     }
                 } catch (InterruptedException e) {
                     e.printStackTrace();

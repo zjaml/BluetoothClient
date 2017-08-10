@@ -1,5 +1,7 @@
 package io.kiny;
 
+import android.text.TextUtils;
+
 import java.util.ArrayList;
 import java.util.List;
 import java.util.regex.Matcher;
@@ -11,10 +13,18 @@ import java.util.regex.Pattern;
  */
 
 public class LockerResponse {
+    public static final String BOX_SEPARATOR = "&";
+    public static final String RESPONSE_TYPE_BOX_OPEN = "A";
+    public static final String RESPONSE_TYPE_BOX_NOT_OPEN = "N";
+    public static final String RESPONSE_TYPE_BOX_STATUS = "B";
+    public static final String RESPONSE_TYPE_CHARGEING = "C";
+    public static final String RESPONSE_TYPE_DISCHARGEING = "D";
+
     public static final String RESPONSE_PATTERN = "(\\d{2}):(\\w)(.*)";
 
     private String _id;
-    private List<BoxStatus> boxStatusList;
+    private String _type;
+    private List<BoxStatus> _boxStatus;
 
     public LockerResponse(String response) {
         Pattern r = Pattern.compile(RESPONSE_PATTERN);
@@ -25,12 +35,18 @@ public class LockerResponse {
             String boxStatus = m.group(3);
             if (boxStatus.length() > 0) {
                 String[] statusList = boxStatus.split("&");
-                boxStatusList = new ArrayList<>();
+                _boxStatus = new ArrayList<>();
                 for (String status : statusList) {
-                    boxStatusList.add(new BoxStatus(status));
+                    _boxStatus.add(new BoxStatus(status));
                 }
             }
         }
+    }
+
+    public LockerResponse(String id, String type, List<BoxStatus> boxStatus) {
+        _id = id;
+        _type = type;
+        _boxStatus = boxStatus;
     }
 
     public String getId() {
@@ -38,6 +54,18 @@ public class LockerResponse {
     }
 
     public List<BoxStatus> getBoxStatus() {
-        return boxStatusList;
+        return _boxStatus;
+    }
+
+    @Override
+    public String toString() {
+        return String.format("%s:%s%s", _id, _type, boxStatusString());
+    }
+
+    private String boxStatusString() {
+        if (_boxStatus != null) {
+            return TextUtils.join(BOX_SEPARATOR, _boxStatus);
+        }
+        return "";
     }
 }
