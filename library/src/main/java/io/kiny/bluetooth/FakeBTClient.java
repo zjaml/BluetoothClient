@@ -19,6 +19,7 @@ import io.kiny.LockerResponse;
 
 /**
  * Created by JZhao on 2/20/2017.
+ *
  */
 
 public class FakeBTClient implements BluetoothClientInterface {
@@ -138,10 +139,10 @@ public class FakeBTClient implements BluetoothClientInterface {
                                     } else {
                                         status = BoxStatus.BOX_FULL;
                                     }
-                                    boxStatusList.add(new BoxStatus(String.format(Locale.US, "%2d", i), status));
-                                    LockerResponse response = new LockerResponse(currentCommand.getId(), LockerResponse.RESPONSE_TYPE_BOX_STATUS, boxStatusList);
-                                    mHandler.obtainMessage(Constants.MESSAGE_INCOMING_MESSAGE, response.toString()).sendToTarget();
+                                    boxStatusList.add(new BoxStatus(String.format(Locale.US, "%02d", i), status));
                                 }
+                                LockerResponse response = new LockerResponse(currentCommand.getId(), LockerResponse.RESPONSE_TYPE_BOX_STATUS, boxStatusList);
+                                mHandler.obtainMessage(Constants.MESSAGE_INCOMING_MESSAGE, response.toString()).sendToTarget();
                             }
                             break;
                         }

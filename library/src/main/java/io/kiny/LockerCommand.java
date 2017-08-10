@@ -16,7 +16,7 @@ public class LockerCommand {
     public static final String COMMAND_TYPE_BOX_STATUS = "B";
     public static final String COMMAND_TYPE_DISCHARGE = "H";
     public static final String COMMAND_TYPE_CHARGE = "L";
-    private int counter = 0;
+    private static int counter = 0;
     private String _id;
     private String _type;
     private List<String> _boxes;
@@ -39,8 +39,10 @@ public class LockerCommand {
         if (m.find()) {
             _id = m.group(1);
             _type = m.group(2);
-            String[] boxes = m.group(3).split(BOX_SEPARATOR);
-            _boxes = Arrays.asList(boxes);
+            if(m.group(3).length() > 0) {
+                String[] boxes = m.group(3).split(BOX_SEPARATOR);
+                _boxes = Arrays.asList(boxes);
+            }
         }
     }
 
