@@ -34,7 +34,7 @@ public class FakeBTClient implements BluetoothClientInterface {
     private int mState;
     private Date connected;
 
-    private Map<Integer, Integer> openDoors;
+    private Map<String, Integer> openDoors;
 
 
     public FakeBTClient(Handler handler, Boolean simulateDisconnection) {
@@ -51,9 +51,9 @@ public class FakeBTClient implements BluetoothClientInterface {
             }
         };
         openDoors = new HashMap<>();
-        openDoors.put(5, 30000);
-        openDoors.put(10, 20000);
-        openDoors.put(29, 60000);
+        openDoors.put("05", 30000);
+        openDoors.put("10", 20000);
+        openDoors.put("29", 60000);
     }
 
     @Override
@@ -132,36 +132,32 @@ public class FakeBTClient implements BluetoothClientInterface {
                             break;
                         }
                         case LockerCommand.COMMAND_TYPE_BOX_STATUS: {
-                            if (currentCommand.hasBoxes()) {
-                                List<BoxStatus> boxStatusList = new ArrayList<>();
-                                List<String> boxes = currentCommand.getBoxes();
-                                for (String box : boxes) {
-                                    boxStatusList.add(new BoxStatus(box, BoxStatus.BOX_OPEN));
-                                }
-                                LockerResponse response = new LockerResponse(currentCommand.getId(), LockerResponse.RESPONSE_TYPE_BOX_STATUS, boxStatusList);
-                                mHandler.obtainMessage(Constants.MESSAGE_INCOMING_MESSAGE, response.toString()).sendToTarget();
-                            } else {
-                                List<BoxStatus> boxStatusList = new ArrayList<>();
+                            List<String> boxes = currentCommand.getBoxes();
+                            if (boxes == null) {
+                                boxes = new ArrayList<>();
                                 for (int i = 0; i < 30; i++) {
-                                    // set 05 29 as open
-                                    String status;
-                                    if (openDoors.containsKey(i)) {
-                                        int timeToClose = openDoors.get(i);
-                                        if (timeToClose + connected.getTime() < (new Date()).getTime()) {
-                                            status = BoxStatus.BOX_FULL;
-                                        } else {
-                                            status = BoxStatus.BOX_OPEN;
-                                        }
-                                    } else if (i % 3 == 0) {
-                                        status = BoxStatus.BOX_EMPTY;
-                                    } else {
-                                        status = BoxStatus.BOX_FULL;
-                                    }
-                                    boxStatusList.add(new BoxStatus(String.format(Locale.US, "%02d", i), status));
+                                    boxes.add(String.format(Locale.US, "%02d", i));
                                 }
-                                LockerResponse response = new LockerResponse(currentCommand.getId(), LockerResponse.RESPONSE_TYPE_BOX_STATUS, boxStatusList);
-                                mHandler.obtainMessage(Constants.MESSAGE_INCOMING_MESSAGE, response.toString()).sendToTarget();
                             }
+                            List<BoxStatus> boxStatusList = new ArrayList<>();
+                            for (String box : boxes) {
+                                String status;
+                                if (openDoors.containsKey(box)) {
+                                    int timeToClose = openDoors.get(box);
+                                    if (timeToClose + connected.getTime() < (new Date()).getTime()) {
+                                        status = BoxStatus.BOX_FULL;
+                                    } else {
+                                        status = BoxStatus.BOX_OPEN;
+                                    }
+                                } else if (Integer.parseInt(box) % 3 == 0) {
+                                    status = BoxStatus.BOX_EMPTY;
+                                } else {
+                                    status = BoxStatus.BOX_FULL;
+                                }
+                                boxStatusList.add(new BoxStatus(box, status));
+                            }
+                            LockerResponse response = new LockerResponse(currentCommand.getId(), LockerResponse.RESPONSE_TYPE_BOX_STATUS, boxStatusList);
+                            mHandler.obtainMessage(Constants.MESSAGE_INCOMING_MESSAGE, response.toString()).sendToTarget();
                             break;
                         }
                         case LockerCommand.COMMAND_TYPE_CHARGE: {
