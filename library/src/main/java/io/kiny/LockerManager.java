@@ -8,8 +8,12 @@ import android.os.Handler;
 import android.os.Message;
 import android.util.Log;
 
+import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Queue;
 import java.util.concurrent.ConcurrentLinkedDeque;
@@ -24,13 +28,12 @@ import io.kiny.bluetooth.FakeBTClient;
  * Manage Locker
  */
 
-
 public class LockerManager {
     private static BluetoothClientInterface mBluetoothClient;
     @SuppressLint("StaticFieldLeak")
     private static Context mApplicationContext;
-
-    private static List<String> openDoors = null;
+    private static Map<String, BoxStatus> boxStatusMap = null;
+    //    private static List<BoxStatus> boxStatusList = null;
     private static Queue<LockerCommand> commandQueue = new ConcurrentLinkedDeque<>();
     private static LockerCommand currentCommand = null;
     private static TimeoutCommandTriggerThread timeoutCommandTriggerThread = null;
@@ -48,7 +51,7 @@ public class LockerManager {
                 case Constants.MESSAGE_CONNECTED:
                     Log.d("LockerManager", "connected");
                     // query open doors if don't know it yet.
-                    if (openDoors == null) {
+                    if (boxStatusMap == null) {
                         queryBoxStatus(null);
                     }
                     break;
@@ -60,16 +63,55 @@ public class LockerManager {
                     // If the queue becomes empty, and there's open door, enqueue a door query command for the opened doors.
                     if (message.matches(LockerResponse.RESPONSE_PATTERN)) {
                         LockerResponse response = new LockerResponse(message);
+                        // monitor box status change, emit door closed event.
+                        List<BoxStatus> boxStatusList = response.getBoxStatus();
+                        if (boxStatusList != null && boxStatusList.size() > 0) {
+                            updateBoxStatus(boxStatusList);
+                        }
+                        // update box status
                         if (currentCommand != null && Objects.equals(response.getId(), currentCommand.getId())) {
                             //remove the current command and dequeue
                             currentCommand = commandQueue.poll();
-                            if (currentCommand == null && openDoors != null && openDoors.size() > 0) {
-                                queueCommand(new LockerCommand(LockerCommand.COMMAND_TYPE_BOX_STATUS, openDoors));
-                            }//else, the current command will be fired on the next loop.
                         }
+                        List<String> openBoxes = getOpenBoxes();
+                        if (currentCommand == null && openBoxes.size() > 0) {
+                            queueCommand(new LockerCommand(LockerCommand.COMMAND_TYPE_BOX_STATUS, openBoxes));
+                        }//else, the current command will be fired on the next loop.
                     }
                     break;
             }
+        }
+    }
+
+    private static List<String> getOpenBoxes() {
+        List<String> boxes = new ArrayList<>();
+        if (boxStatusMap == null)
+            return boxes;
+        Collection<BoxStatus> boxStatusList = boxStatusMap.values();
+        for (BoxStatus boxStatus : boxStatusList) {
+            if (Objects.equals(boxStatus.getStatus(), BoxStatus.BOX_OPEN)) {
+                boxes.add(boxStatus.getBoxNumber());
+            }
+        }
+        return boxes;
+    }
+
+    private static void updateBoxStatus(List<BoxStatus> boxStatusList) {
+        if (boxStatusMap == null) {
+            boxStatusMap = new HashMap<>();
+        }
+        for (BoxStatus newStatus : boxStatusList) {
+            if (boxStatusMap.containsKey(newStatus.getBoxNumber())) {
+                BoxStatus old = boxStatusMap.get(newStatus.getBoxNumber());
+                if (!Objects.equals(old.getStatus(), newStatus.getStatus())) {
+                    if (Objects.equals(newStatus.getStatus(), BoxStatus.BOX_OPEN)) {
+                        Log.d("LockerManager", String.format("Box %s opened!", newStatus.getBoxNumber()));
+                    } else {
+                        Log.d("LockerManager", String.format("Box %s closed, %s!", newStatus.getBoxNumber(), newStatus.getStatus()));
+                    }
+                }
+            }
+            boxStatusMap.put(newStatus.getBoxNumber(), newStatus);
         }
     }
 
@@ -105,7 +147,7 @@ public class LockerManager {
         }
         commandQueue.clear();
         // clear open doors so that the next time it gets connected, it will re-query the door status.
-        openDoors = null;
+        boxStatusMap = null;
         currentCommand = null;
         if (timeoutCommandTriggerThread != null) {
             timeoutCommandTriggerThread.cancel();
@@ -148,7 +190,6 @@ public class LockerManager {
             queueCommand(command);
         }
     }
-
 
     /**
      * Constant loop and check whether the current command expired by compare the command's sent time and now.

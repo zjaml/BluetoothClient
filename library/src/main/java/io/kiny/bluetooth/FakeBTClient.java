@@ -19,9 +19,10 @@ import io.kiny.LockerResponse;
 
 /**
  * Created by JZhao on 2/20/2017.
- *
+ *  Locker simulator
  */
 
+//todo: simulate door closing by setting open time for each door.
 public class FakeBTClient implements BluetoothClientInterface {
     private final String Tag = "FakeBTClient";
     private final Handler mHandler;
@@ -38,7 +39,6 @@ public class FakeBTClient implements BluetoothClientInterface {
             public void onReceive(Context context, Intent intent) {
                 if (Objects.equals(intent.getAction(), BluetoothDevice.ACTION_ACL_DISCONNECTED)) {
                     Log.d(Tag, "bluetooth disconnection detected!");
-                    // todo: crash report.
                     setState(STATE_NONE);
                 }
             }
@@ -94,7 +94,6 @@ public class FakeBTClient implements BluetoothClientInterface {
         //seem to run async tasks sequentially.
 //        delayed.execute();
         delayed.executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR, (Void[]) null);
-
         return true;
     }
 
@@ -114,7 +113,9 @@ public class FakeBTClient implements BluetoothClientInterface {
                     switch (currentCommand.getType()) {
                         case LockerCommand.COMMAND_TYPE_CHECK_IN:
                         case LockerCommand.COMMAND_TYPE_CHECK_OUT: {
-                            LockerResponse response = new LockerResponse(currentCommand.getId(), LockerResponse.RESPONSE_TYPE_BOX_OPEN, null);
+                            List<BoxStatus> boxStatusList = new ArrayList<>();
+                            boxStatusList.add(new BoxStatus(currentCommand.getBoxes().get(0), BoxStatus.BOX_OPEN));
+                            LockerResponse response = new LockerResponse(currentCommand.getId(), LockerResponse.RESPONSE_TYPE_BOX_STATUS, boxStatusList);
                             mHandler.obtainMessage(Constants.MESSAGE_INCOMING_MESSAGE, response.toString()).sendToTarget();
                             break;
                         }
