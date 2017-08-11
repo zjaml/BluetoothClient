@@ -25,7 +25,6 @@ import io.kiny.LockerResponse;
  * Locker simulator
  */
 
-//todo: simulate door closing by setting open time for each door.
 public class FakeBTClient implements BluetoothClientInterface {
     private final String Tag = "FakeBTClient";
     private final Handler mHandler;
@@ -50,6 +49,7 @@ public class FakeBTClient implements BluetoothClientInterface {
                 }
             }
         };
+        // simulate door closing by setting open time for each door.
         openDoors = new HashMap<>();
         openDoors.put("05", 30000);
         openDoors.put("10", 20000);
