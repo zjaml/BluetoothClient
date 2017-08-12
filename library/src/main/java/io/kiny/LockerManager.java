@@ -30,13 +30,15 @@ import io.kiny.bluetooth.FakeBTClient;
 
 public class LockerManager {
     private static BluetoothClientInterface mBluetoothClient;
+    private boolean _useSimulator;
+    private String _targetDeviceName;
     @SuppressLint("StaticFieldLeak")
     private static Context mApplicationContext;
     private static Map<String, BoxStatus> boxStatusMap = null;
     //    private static List<BoxStatus> boxStatusList = null;
-    private static Queue<LockerCommand> commandQueue = new ConcurrentLinkedDeque<>();
+    private static Queue<LockerCommand> commandQueue;
     private static LockerCommand currentCommand = null;
-    private static TimeoutCommandTriggerThread timeoutCommandTriggerThread = null;
+    private static CommanderThread commanderThread = null;
 
     private static class LockerResponseHandler extends Handler {
         public void handleMessage(Message msg) {
@@ -83,6 +85,13 @@ public class LockerManager {
         }
     }
 
+    // need reference to application context as LockerManager will live longer than the activity
+    public LockerManager(String targetDeviceName, Context applicationContext, boolean useSimulator) {
+        mApplicationContext = applicationContext;
+        _useSimulator = useSimulator;
+        _targetDeviceName = targetDeviceName;
+    }
+
     private static List<String> getOpenBoxes() {
         List<String> boxes = new ArrayList<>();
         if (boxStatusMap == null)
@@ -115,43 +124,35 @@ public class LockerManager {
         }
     }
 
-    // need reference to application context as LockerManager will live longer than the activity
-    public LockerManager(String targetDeviceName, Context applicationContext, boolean useSimulator) {
-        mApplicationContext = applicationContext;
+    public void start() {
         LockerResponseHandler handler = new LockerResponseHandler();
-        if (useSimulator) {
+        if (_useSimulator) {
             mBluetoothClient = new FakeBTClient(handler, false);
         } else {
-            mBluetoothClient = new BluetoothClient(handler, targetDeviceName);
+            mBluetoothClient = new BluetoothClient(handler, _targetDeviceName);
         }
-    }
-
-    public void start() {
-        if (mBluetoothClient != null && mBluetoothClient.getState() == BluetoothClient.STATE_NONE) {
-            mBluetoothClient.connect();
-            mBluetoothClient.getBluetoothBroadcastReceiver()
-                    .safeRegister(mApplicationContext, new IntentFilter(BluetoothDevice.ACTION_ACL_DISCONNECTED));
-        }
-        commandQueue.clear();
-        if (timeoutCommandTriggerThread != null) {
-            timeoutCommandTriggerThread.cancel();
-        }
-        timeoutCommandTriggerThread = new TimeoutCommandTriggerThread();
-        timeoutCommandTriggerThread.start();
+        mBluetoothClient.connect();
+        mBluetoothClient.getBluetoothBroadcastReceiver()
+                .safeRegister(mApplicationContext, new IntentFilter(BluetoothDevice.ACTION_ACL_DISCONNECTED));
+        commandQueue = new ConcurrentLinkedDeque<>();
+        commanderThread = new CommanderThread();
+        commanderThread.start();
     }
 
     public void stop() {
         if (mBluetoothClient != null) {
             mBluetoothClient.disconnect();
             mBluetoothClient.getBluetoothBroadcastReceiver().safeUnregister(mApplicationContext);
+            mBluetoothClient = null;
         }
         commandQueue.clear();
+        commandQueue = null;
         // clear open doors so that the next time it gets connected, it will re-query the door status.
         boxStatusMap = null;
         currentCommand = null;
-        if (timeoutCommandTriggerThread != null) {
-            timeoutCommandTriggerThread.cancel();
-            timeoutCommandTriggerThread = null;
+        if (commanderThread != null) {
+            commanderThread.cancel();
+            commanderThread = null;
         }
     }
 
@@ -196,7 +197,7 @@ public class LockerManager {
      * If the current command expired, remove it and send the next command in queue to the board.
      * Todo: maybe able to optimize CPU usage by killing this thread when not needed and only let it run when it becomes necessary
      */
-    private class TimeoutCommandTriggerThread extends Thread {
+    private class CommanderThread extends Thread {
         private boolean mmStopSignal = false;
 
         public void run() {

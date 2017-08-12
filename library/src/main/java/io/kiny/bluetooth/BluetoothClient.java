@@ -8,8 +8,10 @@ import android.content.Intent;
 import android.os.Handler;
 import android.util.Log;
 
+import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.nio.charset.Charset;
 import java.util.Objects;
@@ -266,25 +268,13 @@ public class BluetoothClient implements BluetoothClientInterface {
 
         public void run() {
             Log.i(TAG, "BEGIN mConnectedThread");
-            byte[] buffer = new byte[1024];
-            int bytes;
-
             // Keep listening to the InputStream while connected
             while (isConnected()) {
                 try {
-                    // Read from the InputStream
-                    bytes = mmInStream.read(buffer);
-                    String data = new String(buffer, US_ASCII);
-                    for (char ch : data.toCharArray()) {
-                        if (ch != DELIMITER) {
-                            mmMessageBuffer.append(ch);
-                        } else {
-                            String message = mmMessageBuffer.toString();
-                            // Send the obtained message to caller
-                            mHandler.obtainMessage(Constants.MESSAGE_INCOMING_MESSAGE, message)
-                                    .sendToTarget();
-                            mmMessageBuffer = new StringBuilder();
-                        }
+                    BufferedReader r = new BufferedReader(new InputStreamReader(mmInStream));
+                    String line;
+                    while ((line = r.readLine()) != null) {
+                        mHandler.obtainMessage(Constants.MESSAGE_INCOMING_MESSAGE, line).sendToTarget();
                     }
                 } catch (IOException e) {
                     Log.e(TAG, "disconnected", e);

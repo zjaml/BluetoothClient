@@ -90,10 +90,6 @@ public class LockerCommand {
         return _boxes;
     }
 
-    public boolean hasBoxes() {
-        return _boxes != null && _boxes.size() > 0;
-    }
-
     public Date getSent() {
         return _sent;
     }

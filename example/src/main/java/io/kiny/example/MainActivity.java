@@ -9,21 +9,16 @@ import io.kiny.LockerManager;
 
 public class MainActivity extends AppCompatActivity {
     @SuppressLint("StaticFieldLeak")
-    public static LockerManager mLockerManager;
+    public LockerManager mLockerManager;
     Button checkinButton;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        mLockerManager = new LockerManager("HC06", getApplicationContext(), true);
+        mLockerManager = new LockerManager("HC-06", getApplicationContext(), false);
+        mLockerManager.start();
         setContentView(R.layout.activity_main);
         checkinButton = (Button)findViewById(R.id.checkinButton);
-    }
-
-    @Override
-    protected void onResume() {
-        super.onResume();
-        mLockerManager.start();
     }
 
     @Override
