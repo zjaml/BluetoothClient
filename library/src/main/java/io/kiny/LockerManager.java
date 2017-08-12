@@ -3,9 +3,11 @@ package io.kiny;
 import android.annotation.SuppressLint;
 import android.bluetooth.BluetoothDevice;
 import android.content.Context;
+import android.content.Intent;
 import android.content.IntentFilter;
 import android.os.Handler;
 import android.os.Message;
+import android.support.v4.content.LocalBroadcastManager;
 import android.util.Log;
 
 import java.util.ArrayList;
@@ -53,6 +55,8 @@ public class LockerManager {
                 case Constants.MESSAGE_CONNECTED:
                     Log.d("LockerManager", "connected");
                     queryBoxStatus(null);
+                    Intent intent=new Intent("connected");
+                    LocalBroadcastManager.getInstance(mApplicationContext).sendBroadcast(intent);
                     break;
                 case Constants.MESSAGE_INCOMING_MESSAGE:
                     String message = (String) msg.obj;
