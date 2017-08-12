@@ -52,10 +52,7 @@ public class LockerManager {
                     break;
                 case Constants.MESSAGE_CONNECTED:
                     Log.d("LockerManager", "connected");
-                    // query open doors if don't know it yet.
-                    if (boxStatusMap == null) {
-                        queryBoxStatus(null);
-                    }
+                    queryBoxStatus(null);
                     break;
                 case Constants.MESSAGE_INCOMING_MESSAGE:
                     String message = (String) msg.obj;
@@ -106,9 +103,6 @@ public class LockerManager {
     }
 
     private static void updateBoxStatus(List<BoxStatus> boxStatusList) {
-        if (boxStatusMap == null) {
-            boxStatusMap = new HashMap<>();
-        }
         for (BoxStatus newStatus : boxStatusList) {
             if (boxStatusMap.containsKey(newStatus.getBoxNumber())) {
                 BoxStatus old = boxStatusMap.get(newStatus.getBoxNumber());
@@ -126,6 +120,7 @@ public class LockerManager {
 
     public void start() {
         LockerResponseHandler handler = new LockerResponseHandler();
+        boxStatusMap = new HashMap<>();
         if (_useSimulator) {
             mBluetoothClient = new FakeBTClient(handler, false);
         } else {
