@@ -6,7 +6,6 @@ import android.content.Intent;
 import android.os.AsyncTask;
 import android.os.Handler;
 import android.util.Log;
-import android.widget.Switch;
 
 import java.util.ArrayList;
 import java.util.Date;
@@ -161,12 +160,12 @@ public class FakeBTClient implements BluetoothClientInterface {
                             break;
                         }
                         case LockerCommand.COMMAND_TYPE_CHARGE: {
-                            LockerResponse response = new LockerResponse(currentCommand.getId(), LockerResponse.RESPONSE_TYPE_CHARGEING, null);
+                            LockerResponse response = new LockerResponse(currentCommand.getId(), LockerResponse.RESPONSE_TYPE_CHARGING, null);
                             mHandler.obtainMessage(Constants.MESSAGE_INCOMING_MESSAGE, response.toString()).sendToTarget();
                             break;
                         }
                         case LockerCommand.COMMAND_TYPE_DISCHARGE: {
-                            LockerResponse response = new LockerResponse(currentCommand.getId(), LockerResponse.RESPONSE_TYPE_DISCHARGEING, null);
+                            LockerResponse response = new LockerResponse(currentCommand.getId(), LockerResponse.RESPONSE_TYPE_DISCHARGING, null);
                             mHandler.obtainMessage(Constants.MESSAGE_INCOMING_MESSAGE, response.toString()).sendToTarget();
                             break;
                         }

@@ -14,11 +14,10 @@ import java.util.regex.Pattern;
 
 public class LockerResponse {
     public static final String BOX_SEPARATOR = "&";
-    public static final String RESPONSE_TYPE_BOX_OPEN = "A";
-    public static final String RESPONSE_TYPE_BOX_NOT_OPEN = "N";
+    public static final String RESPONSE_TYPE_NEGATIVE = "N";
     public static final String RESPONSE_TYPE_BOX_STATUS = "B";
-    public static final String RESPONSE_TYPE_CHARGEING = "C";
-    public static final String RESPONSE_TYPE_DISCHARGEING = "D";
+    public static final String RESPONSE_TYPE_CHARGING = "C";
+    public static final String RESPONSE_TYPE_DISCHARGING = "D";
 
     public static final String RESPONSE_PATTERN = "(\\d{2}):(\\w)(.*)";
 
@@ -32,6 +31,7 @@ public class LockerResponse {
         Matcher m = r.matcher(response);
         if (m.find()) {
             _id = m.group(1);
+            _type = m.group(2);
             String boxStatus = m.group(3);
             if (boxStatus.length() > 0) {
                 String[] statusList = boxStatus.split("&");
@@ -51,6 +51,10 @@ public class LockerResponse {
 
     public String getId() {
         return _id;
+    }
+
+    public String getType() {
+        return _type;
     }
 
     public List<BoxStatus> getBoxStatus() {

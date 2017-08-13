@@ -41,24 +41,34 @@ public class LockerManager {
     private static Queue<LockerCommand> commandQueue;
     private static LockerCommand currentCommand = null;
     private static CommanderThread commanderThread = null;
+    public static final String ACTION_LOCKER_CONNECTED = "LOCKER_CONNECTED";
+    public static final String ACTION_LOCKER_DISCONNECTED = "LOCKER_DISCONNECTED";
+    public static final String ACTION_LOCKER_BOX_CLOSED = "LOCKER_BOX_CLOSED";
+    public static final String ACTION_LOCKER_BOX_OPENED = "LOCKER_BOX_OPENED";
+    public static final String ACTION_LOCKER_CHARGING = "LOCKER_CHARGING";
+    public static final String ACTION_LOCKER_DISCHARGING = "LOCKER_DISCHARGING";
 
     private static class LockerResponseHandler extends Handler {
         public void handleMessage(Message msg) {
             switch (msg.what) {
-                case Constants.MESSAGE_CONNECTION_LOST:
+                case Constants.MESSAGE_CONNECTION_LOST: {
                     Log.d("LockerManager", "connection lost");
+                    Intent intent = new Intent(ACTION_LOCKER_DISCONNECTED);
+                    LocalBroadcastManager.getInstance(mApplicationContext).sendBroadcast(intent);
                     // reconnect since connection is lost
                     if (mBluetoothClient != null) {
                         mBluetoothClient.connect();
                     }
                     break;
-                case Constants.MESSAGE_CONNECTED:
+                }
+                case Constants.MESSAGE_CONNECTED: {
                     Log.d("LockerManager", "connected");
                     queryBoxStatus(null);
-                    Intent intent=new Intent("connected");
+                    Intent intent = new Intent(ACTION_LOCKER_CONNECTED);
                     LocalBroadcastManager.getInstance(mApplicationContext).sendBroadcast(intent);
                     break;
-                case Constants.MESSAGE_INCOMING_MESSAGE:
+                }
+                case Constants.MESSAGE_INCOMING_MESSAGE: {
                     String message = (String) msg.obj;
                     Log.d("LockerManager", String.format("incoming response:%s", message));
                     // Dequeue the current command if its ID matches the command ID in the response.
@@ -66,6 +76,14 @@ public class LockerManager {
                     // If the queue becomes empty, and there's open door, enqueue a door query command for the opened doors.
                     if (message.matches(LockerResponse.RESPONSE_PATTERN)) {
                         LockerResponse response = new LockerResponse(message);
+                        if (response.getType() == LockerResponse.RESPONSE_TYPE_CHARGING) {
+                            Intent intent = new Intent(ACTION_LOCKER_CHARGING);
+                            LocalBroadcastManager.getInstance(mApplicationContext).sendBroadcast(intent);
+                        }
+                        if (response.getType() == LockerResponse.RESPONSE_TYPE_DISCHARGING) {
+                            Intent intent = new Intent(ACTION_LOCKER_DISCHARGING);
+                            LocalBroadcastManager.getInstance(mApplicationContext).sendBroadcast(intent);
+                        }
                         // monitor box status change, emit door closed event.
                         List<BoxStatus> boxStatusList = response.getBoxStatus();
                         if (boxStatusList != null && boxStatusList.size() > 0) {
@@ -82,6 +100,7 @@ public class LockerManager {
                         }//else, the current command will be fired on the next loop.
                     }
                     break;
+                }
             }
         }
     }
@@ -113,8 +132,15 @@ public class LockerManager {
                 if (!Objects.equals(old.getStatus(), newStatus.getStatus())) {
                     if (Objects.equals(newStatus.getStatus(), BoxStatus.BOX_OPEN)) {
                         Log.d("LockerManager", String.format("Box %s opened!", newStatus.getBoxNumber()));
+                        Intent intent = new Intent(ACTION_LOCKER_BOX_OPENED);
+                        intent.putExtra("box", newStatus.getBoxNumber());
+                        LocalBroadcastManager.getInstance(mApplicationContext).sendBroadcast(intent);
                     } else {
                         Log.d("LockerManager", String.format("Box %s closed, %s!", newStatus.getBoxNumber(), newStatus.getStatus()));
+                        Intent intent = new Intent(ACTION_LOCKER_BOX_CLOSED);
+                        intent.putExtra("box", newStatus.getBoxNumber());
+                        intent.putExtra("isEmpty", newStatus.getStatus() == BoxStatus.BOX_EMPTY);
+                        LocalBroadcastManager.getInstance(mApplicationContext).sendBroadcast(intent);
                     }
                 }
             }
