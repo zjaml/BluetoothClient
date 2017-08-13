@@ -134,7 +134,7 @@ public class FakeBTClient implements BluetoothClientInterface {
                             List<String> boxes = currentCommand.getBoxes();
                             if (boxes == null) {
                                 boxes = new ArrayList<>();
-                                for (int i = 0; i < 30; i++) {
+                                for (int i = 1; i <= 30; i++) {
                                     boxes.add(String.format(Locale.US, "%02d", i));
                                 }
                             }
