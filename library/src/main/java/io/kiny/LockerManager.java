@@ -31,16 +31,16 @@ import io.kiny.bluetooth.FakeBTClient;
  */
 
 public class LockerManager {
-    private static BluetoothClientInterface mBluetoothClient;
+    private BluetoothClientInterface mBluetoothClient;
     private boolean _useSimulator;
     private String _targetDeviceName;
-    @SuppressLint("StaticFieldLeak")
-    private static Context mApplicationContext;
-    private static Map<String, BoxStatus> boxStatusMap = null;
+    private Context mApplicationContext;
+    private Map<String, BoxStatus> boxStatusMap = null;
     //    private static List<BoxStatus> boxStatusList = null;
-    private static Queue<LockerCommand> commandQueue;
-    private static LockerCommand currentCommand = null;
-    private static CommanderThread commanderThread = null;
+    private Queue<LockerCommand> commandQueue;
+    private LockerCommand currentCommand = null;
+    private CommanderThread commanderThread = null;
+    public static final String ACTION_LOCKER_ALL_BOXES_STATUS = "LOCKER_ALL_BOXES_STATUS";
     public static final String ACTION_LOCKER_CONNECTED = "LOCKER_CONNECTED";
     public static final String ACTION_LOCKER_DISCONNECTED = "LOCKER_DISCONNECTED";
     public static final String ACTION_LOCKER_BOX_CLOSED = "LOCKER_BOX_CLOSED";
@@ -48,7 +48,7 @@ public class LockerManager {
     public static final String ACTION_LOCKER_CHARGING = "LOCKER_CHARGING";
     public static final String ACTION_LOCKER_DISCHARGING = "LOCKER_DISCHARGING";
 
-    private static class LockerResponseHandler extends Handler {
+    private class LockerResponseHandler extends Handler {
         public void handleMessage(Message msg) {
             switch (msg.what) {
                 case Constants.MESSAGE_CONNECTION_LOST: {
@@ -112,7 +112,7 @@ public class LockerManager {
         _targetDeviceName = targetDeviceName;
     }
 
-    private static List<String> getOpenBoxes() {
+    private List<String> getOpenBoxes() {
         List<String> boxes = new ArrayList<>();
         if (boxStatusMap == null)
             return boxes;
@@ -125,8 +125,11 @@ public class LockerManager {
         return boxes;
     }
 
-    private static void updateBoxStatus(List<BoxStatus> boxStatusList) {
+    private void updateBoxStatus(List<BoxStatus> boxStatusList) {
         for (BoxStatus newStatus : boxStatusList) {
+            if(boxStatusMap == null){
+                boxStatusMap = new HashMap<>();
+            }
             if (boxStatusMap.containsKey(newStatus.getBoxNumber())) {
                 BoxStatus old = boxStatusMap.get(newStatus.getBoxNumber());
                 if (!Objects.equals(old.getStatus(), newStatus.getStatus())) {
@@ -139,12 +142,16 @@ public class LockerManager {
                         Log.d("LockerManager", String.format("Box %s closed, %s!", newStatus.getBoxNumber(), newStatus.getStatus()));
                         Intent intent = new Intent(ACTION_LOCKER_BOX_CLOSED);
                         intent.putExtra("box", newStatus.getBoxNumber());
-                        intent.putExtra("isEmpty", newStatus.getStatus() == BoxStatus.BOX_EMPTY);
+                        intent.putExtra("status", newStatus.getStatus());
                         LocalBroadcastManager.getInstance(mApplicationContext).sendBroadcast(intent);
                     }
                 }
             }
             boxStatusMap.put(newStatus.getBoxNumber(), newStatus);
+        }
+        if (boxStatusList.size() == 30) {
+            Intent intent = new Intent(ACTION_LOCKER_ALL_BOXES_STATUS);
+            LocalBroadcastManager.getInstance(mApplicationContext).sendBroadcast(intent);
         }
     }
 
@@ -181,16 +188,20 @@ public class LockerManager {
         }
     }
 
-    private static boolean isBtConnected() {
+    private boolean isBtConnected() {
         return mBluetoothClient != null && mBluetoothClient.getState() == BluetoothClientInterface.STATE_CONNECTED;
     }
 
-    public static void queryBoxStatus(List<String> boxes) {
+    public void queryBoxStatus(List<String> boxes) {
         LockerCommand command = new LockerCommand(LockerCommand.COMMAND_TYPE_BOX_STATUS, boxes);
         queueCommand(command);
     }
 
-    private static synchronized void queueCommand(LockerCommand command) {
+    public Collection<BoxStatus> getBoxStatus() {
+        return boxStatusMap.values();
+    }
+
+    private synchronized void queueCommand(LockerCommand command) {
         //using synchronized to protect currentCommand
         if (currentCommand == null) {
             currentCommand = command;
@@ -199,7 +210,7 @@ public class LockerManager {
         }
     }
 
-    private static void sendCommand(LockerCommand command) {
+    private void sendCommand(LockerCommand command) {
         //intentionally drop the command if disconnected,
         if (isBtConnected()) {
             Log.d("LockerManager", String.format("sending command:%s", command.toString()));
@@ -209,7 +220,7 @@ public class LockerManager {
         command.recordSent();
     }
 
-    public static void requestToCheckIn(String compartmentNumber) {
+    public void requestToCheckIn(String compartmentNumber) {
         if (isBtConnected()) {
             List<String> doors = Collections.singletonList(compartmentNumber);
             LockerCommand command = new LockerCommand(LockerCommand.COMMAND_TYPE_CHECK_IN, doors);
