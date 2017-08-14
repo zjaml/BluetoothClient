@@ -101,10 +101,8 @@ public class MainActivity extends AppCompatActivity {
                     ViewGroup.LayoutParams.WRAP_CONTENT,
                     ViewGroup.LayoutParams.WRAP_CONTENT
             );
-            String boxId = String.format(Locale.US, "%02d", i);
-            String title = boxId;
-            boxButton.setText(String.format("%s E", title));
-            boxButton.setTag(boxId);
+            final String boxId = String.format(Locale.US, "%02d", i);
+            boxButton.setText(String.format("%s E", boxId));
             boxButton.setLayoutParams(layoutParams);
             boxButton.setMinimumWidth(0);
             boxButton.setMinWidth(0);
@@ -117,7 +115,9 @@ public class MainActivity extends AppCompatActivity {
                     builder.setItems(items, new DialogInterface.OnClickListener() {
                         public void onClick(DialogInterface dialog, int item) {
                             if (item == 0) {
-                                mLockerManager.requestToCheckIn((String) box.getTag());
+                                mLockerManager.requestToCheckIn(boxId);
+                            }else{
+                                mLockerManager.requestToCheckOut(boxId);
                             }
 //                            Toast.makeText(MainActivity.this, String.format(Locale.US, "%02d", box.getId()), Toast.LENGTH_SHORT).show();
                         }

@@ -222,8 +222,30 @@ public class LockerManager {
 
     public void requestToCheckIn(String compartmentNumber) {
         if (isBtConnected()) {
-            List<String> doors = Collections.singletonList(compartmentNumber);
-            LockerCommand command = new LockerCommand(LockerCommand.COMMAND_TYPE_CHECK_IN, doors);
+            List<String> boxes = Collections.singletonList(compartmentNumber);
+            LockerCommand command = new LockerCommand(LockerCommand.COMMAND_TYPE_CHECK_IN, boxes);
+            queueCommand(command);
+        }
+    }
+
+    public void requestToCheckOut(String compartmentNumber) {
+        if (isBtConnected()) {
+            List<String> boxes = Collections.singletonList(compartmentNumber);
+            LockerCommand command = new LockerCommand(LockerCommand.COMMAND_TYPE_CHECK_OUT, boxes);
+            queueCommand(command);
+        }
+    }
+
+    public void requestToCharge() {
+        if (isBtConnected()) {
+            LockerCommand command = new LockerCommand(LockerCommand.COMMAND_TYPE_CHARGE, null);
+            queueCommand(command);
+        }
+    }
+
+    public void requestToDischarge() {
+        if (isBtConnected()) {
+            LockerCommand command = new LockerCommand(LockerCommand.COMMAND_TYPE_DISCHARGE, null);
             queueCommand(command);
         }
     }
