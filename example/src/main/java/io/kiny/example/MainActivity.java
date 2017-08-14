@@ -13,7 +13,6 @@ import android.support.v7.app.AppCompatActivity;
 import android.util.Log;
 import android.view.View;
 import android.view.ViewGroup;
-import android.widget.TextView;
 import android.widget.Toast;
 import android.widget.ToggleButton;
 
@@ -30,8 +29,8 @@ import io.kiny.BoxStatus;
 import io.kiny.LockerManager;
 
 public class MainActivity extends AppCompatActivity {
+    public static final String TARGET_DEVICE_NAME = "HC-06";
     private LockerManager mLockerManager;
-    TextView logtxt;
     FlowLayout flowLayout;
     private boolean connected = false;
     private boolean charging = false;
@@ -62,13 +61,12 @@ public class MainActivity extends AppCompatActivity {
                     showToast("Charging response received");
                     break;
                 case LockerManager.ACTION_LOCKER_DISCHARGING:
-                    showToast("DisCharging response received");
+                    showToast("Discharging response received");
                     break;
                 case LockerManager.ACTION_LOCKER_BOX_OPENED: {
                     String boxNumber = intent.getStringExtra("box");
                     String log = String.format("%s Box Number:%s \n",
                             "Opened", boxNumber);
-                    logtxt.append(log);
                     updateBoxStatus(boxNumber, "O");
                     break;
                 }
@@ -77,7 +75,6 @@ public class MainActivity extends AppCompatActivity {
                     String boxStatus = intent.getStringExtra("status");
                     String log = String.format("%s Box: %s Status: %s\n",
                             "Closed", boxNumber, boxStatus);
-                    logtxt.append(log);
                     updateBoxStatus(boxNumber, boxStatus);
                     break;
                 }
@@ -115,19 +112,18 @@ public class MainActivity extends AppCompatActivity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        mLockerManager = new LockerManager("HC-06", getApplicationContext(), true);
+        mLockerManager = new LockerManager(TARGET_DEVICE_NAME, getApplicationContext(), true);
         mLockerManager.start();
         setContentView(R.layout.activity_main);
         flowLayout = (FlowLayout) findViewById(R.id.flowLayout);
         initBoxes();
-        logtxt = (TextView) findViewById(R.id.logtxt);
     }
 
     private void initBoxes() {
         boxButtons = new ArrayList<>();
 
         for (int i = 1; i <= 30; i++) {
-            MyToggleButton boxButton = new MyToggleButton(this);
+            final MyToggleButton boxButton = new MyToggleButton(this);
             FlowLayout.LayoutParams layoutParams = new FlowLayout.LayoutParams(
                     ViewGroup.LayoutParams.WRAP_CONTENT,
                     ViewGroup.LayoutParams.WRAP_CONTENT
@@ -135,6 +131,7 @@ public class MainActivity extends AppCompatActivity {
             final String boxId = String.format(Locale.US, "%02d", i);
             boxButton.setText(String.format("%s E", boxId));
             boxButton.setLayoutParams(layoutParams);
+            boxButton.setTag("E");
             boxButton.setMinimumWidth(0);
             boxButton.setMinWidth(0);
 
@@ -143,6 +140,7 @@ public class MainActivity extends AppCompatActivity {
                 public void onClick(final View box) {
                     final CharSequence[] items = {"CHECK IN", "CHECK OUT"};
                     AlertDialog.Builder builder = new AlertDialog.Builder(MainActivity.this);
+                    builder.setTitle(String.format("Box: %s", boxId));
                     builder.setItems(items, new DialogInterface.OnClickListener() {
                         public void onClick(DialogInterface dialog, int item) {
                             if (item == 0) {
@@ -165,7 +163,7 @@ public class MainActivity extends AppCompatActivity {
         int boxNumber = Integer.parseInt(strBoxNumber);
         ToggleButton boxButton = boxButtons.get(boxNumber - 1);
         String title = String.format("%s %s", strBoxNumber, boxStatus);
-
+        boxButton.setTag(boxStatus);
         boxButton.setText(title);
         boxButton.setTextOff(title);
         boxButton.setTextOn(title);
