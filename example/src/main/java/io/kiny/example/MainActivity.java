@@ -6,6 +6,7 @@ import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.IntentFilter;
+import android.os.BatteryManager;
 import android.os.Bundle;
 import android.support.v4.content.LocalBroadcastManager;
 import android.support.v7.app.AppCompatActivity;
@@ -13,6 +14,7 @@ import android.util.Log;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.TextView;
+import android.widget.Toast;
 import android.widget.ToggleButton;
 
 
@@ -35,27 +37,32 @@ public class MainActivity extends AppCompatActivity {
     private boolean charging = false;
     private List<ToggleButton> boxButtons;
 
-    private BroadcastReceiver onNotice = new BroadcastReceiver() {
+    private BroadcastReceiver lockerBroadcastReceiver = new BroadcastReceiver() {
         @Override
         public void onReceive(Context context, Intent intent) {
             switch (intent.getAction()) {
                 case LockerManager.ACTION_LOCKER_ALL_BOXES_STATUS:
                     Log.d("LockerManager", "ACTION_LOCKER_ALL_BOXES_STATUS");
-                    Collection<BoxStatus> allboxStatus = mLockerManager.getBoxStatus();
-                    for (BoxStatus boxstatus : allboxStatus) {
+                    Collection<BoxStatus> allBoxStatus = mLockerManager.getBoxStatus();
+                    for (BoxStatus boxstatus : allBoxStatus) {
                         updateBoxStatus(boxstatus.getBoxNumber(), boxstatus.getStatus());
                     }
                 case LockerManager.ACTION_LOCKER_CONNECTED:
                     connected = true;
+                    setTitle(String.format("%s %s", "Connected",
+                            charging ? "Charging" : "Discharging"));
                     break;
                 case LockerManager.ACTION_LOCKER_DISCONNECTED:
                     connected = false;
+                    setTitle(String.format("%s %s",
+                            "Disconnected",
+                            charging ? "Charging" : "Discharging"));
                     break;
                 case LockerManager.ACTION_LOCKER_CHARGING:
-                    charging = true;
+                    showToast("Charging response received");
                     break;
                 case LockerManager.ACTION_LOCKER_DISCHARGING:
-                    charging = false;
+                    showToast("DisCharging response received");
                     break;
                 case LockerManager.ACTION_LOCKER_BOX_OPENED: {
                     String boxNumber = intent.getStringExtra("box");
@@ -75,9 +82,33 @@ public class MainActivity extends AppCompatActivity {
                     break;
                 }
             }
-            setTitle(String.format("%s %s",
-                    connected ? "Connected" : "Disconnected",
-                    charging ? "Charging" : "Discharging"));
+        }
+    };
+
+    private BroadcastReceiver batteryReceiver = new BroadcastReceiver() {
+        @Override
+        public void onReceive(Context context, Intent intent) {
+            switch (intent.getAction()) {
+                case Intent.ACTION_BATTERY_CHANGED:
+                case Intent.ACTION_BATTERY_LOW:
+                case Intent.ACTION_POWER_CONNECTED:
+                case Intent.ACTION_POWER_DISCONNECTED:
+                    int status = intent.getIntExtra(BatteryManager.EXTRA_STATUS, -1);
+                    charging = status == BatteryManager.BATTERY_STATUS_CHARGING;
+                    setTitle(String.format("%s %s",
+                            connected ? "Connected" : "Disconnected",
+                            charging ? "Charging" : "Discharging"));
+//                            status == BatteryManager.BATTERY_STATUS_FULL;
+                    int level = intent.getIntExtra(BatteryManager.EXTRA_LEVEL, -1);
+                    int scale = intent.getIntExtra(BatteryManager.EXTRA_SCALE, -1);
+                    float batteryPct = level / (float) scale;
+                    Log.d("Battery", String.format("Battery: %.0f%%", batteryPct * 100));
+                    if (batteryPct < 0.5 && !charging) {
+                        mLockerManager.requestToCharge();
+                    } else if (batteryPct > 0.55 && charging) {
+                        mLockerManager.requestToDischarge();
+                    }
+            }
         }
     };
 
@@ -116,10 +147,9 @@ public class MainActivity extends AppCompatActivity {
                         public void onClick(DialogInterface dialog, int item) {
                             if (item == 0) {
                                 mLockerManager.requestToCheckIn(boxId);
-                            }else{
+                            } else {
                                 mLockerManager.requestToCheckOut(boxId);
                             }
-//                            Toast.makeText(MainActivity.this, String.format(Locale.US, "%02d", box.getId()), Toast.LENGTH_SHORT).show();
                         }
                     });
                     AlertDialog alert = builder.create();
@@ -154,8 +184,8 @@ public class MainActivity extends AppCompatActivity {
     protected void onResume() {
         super.onResume();
         if (mLockerManager != null && (mLockerManager.getBoxStatus() != null)) {
-            Collection<BoxStatus> allboxStatus = mLockerManager.getBoxStatus();
-            for (BoxStatus boxstatus : allboxStatus) {
+            Collection<BoxStatus> allBoxStatus = mLockerManager.getBoxStatus();
+            for (BoxStatus boxstatus : allBoxStatus) {
                 updateBoxStatus(boxstatus.getBoxNumber(), boxstatus.getStatus());
             }
         }
@@ -167,12 +197,25 @@ public class MainActivity extends AppCompatActivity {
         intentFilter.addAction(LockerManager.ACTION_LOCKER_DISCHARGING);
         intentFilter.addAction(LockerManager.ACTION_LOCKER_CONNECTED);
         intentFilter.addAction(LockerManager.ACTION_LOCKER_DISCONNECTED);
-        LocalBroadcastManager.getInstance(this).registerReceiver(onNotice, intentFilter);
+
+        LocalBroadcastManager.getInstance(this).registerReceiver(lockerBroadcastReceiver, intentFilter);
+
+        IntentFilter batteryIntentFilter = new IntentFilter();
+        //monitor battery/charging change
+        batteryIntentFilter.addAction(Intent.ACTION_BATTERY_CHANGED);
+        batteryIntentFilter.addAction(Intent.ACTION_POWER_CONNECTED);
+        batteryIntentFilter.addAction(Intent.ACTION_POWER_DISCONNECTED);
+        this.registerReceiver(batteryReceiver, batteryIntentFilter);
     }
 
     @Override
     protected void onPause() {
         super.onPause();
-        LocalBroadcastManager.getInstance(this).unregisterReceiver(onNotice);
+        this.unregisterReceiver(batteryReceiver);
+        LocalBroadcastManager.getInstance(this).unregisterReceiver(lockerBroadcastReceiver);
+    }
+
+    private void showToast(String message) {
+        Toast.makeText(this, message, Toast.LENGTH_SHORT).show();
     }
 }
