@@ -112,7 +112,7 @@ public class MainActivity extends AppCompatActivity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        mLockerManager = new LockerManager(TARGET_DEVICE_NAME, getApplicationContext(), true);
+        mLockerManager = new LockerManager(TARGET_DEVICE_NAME, getApplicationContext(), false);
         mLockerManager.start();
         setContentView(R.layout.activity_main);
         flowLayout = (FlowLayout) findViewById(R.id.flowLayout);
