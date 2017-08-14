@@ -4,8 +4,6 @@ import android.bluetooth.BluetoothDevice;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
-import android.os.Handler;
-import android.os.Message;
 import android.support.v4.content.LocalBroadcastManager;
 import android.util.Log;
 
@@ -19,6 +17,7 @@ import java.util.Objects;
 import java.util.Queue;
 import java.util.concurrent.ConcurrentLinkedDeque;
 
+import io.kiny.bluetooth.BluetoothCallback;
 import io.kiny.bluetooth.BluetoothClient;
 import io.kiny.bluetooth.BluetoothClientInterface;
 import io.kiny.bluetooth.Constants;
@@ -29,7 +28,7 @@ import io.kiny.bluetooth.FakeBTClient;
  * Manage Locker
  */
 
-public class LockerManager {
+public class LockerManager implements BluetoothCallback {
     private BluetoothClientInterface mBluetoothClient;
     private boolean _useSimulator;
     private String _targetDeviceName;
@@ -47,62 +46,62 @@ public class LockerManager {
     public static final String ACTION_LOCKER_CHARGING = "LOCKER_CHARGING";
     public static final String ACTION_LOCKER_DISCHARGING = "LOCKER_DISCHARGING";
 
-    private class LockerResponseHandler extends Handler {
-        public void handleMessage(Message msg) {
-            switch (msg.what) {
-                case Constants.MESSAGE_CONNECTION_LOST: {
-                    Log.d("LockerManager", "connection lost");
-                    Intent intent = new Intent(ACTION_LOCKER_DISCONNECTED);
-                    LocalBroadcastManager.getInstance(mApplicationContext).sendBroadcast(intent);
-                    // reconnect since connection is lost
-                    if (mBluetoothClient != null) {
-                        mBluetoothClient.connect();
+    @Override
+    public void onBluetoothEvent(int eventType, String message) {
+        switch (eventType) {
+            case Constants.MESSAGE_CONNECTION_LOST: {
+                Log.d("LockerManager", "connection lost");
+                Intent intent = new Intent(ACTION_LOCKER_DISCONNECTED);
+                LocalBroadcastManager.getInstance(mApplicationContext).sendBroadcast(intent);
+                // reconnect since connection is lost
+                if (mBluetoothClient != null) {
+                    mBluetoothClient.connect();
+                }
+                break;
+            }
+            case Constants.MESSAGE_CONNECTED: {
+                Log.d("LockerManager", "connected");
+                queryBoxStatus(null);
+                Intent intent = new Intent(ACTION_LOCKER_CONNECTED);
+                LocalBroadcastManager.getInstance(mApplicationContext).sendBroadcast(intent);
+                break;
+            }
+            case Constants.MESSAGE_INCOMING_MESSAGE: {
+                Log.d("LockerManager", String.format("incoming response:%s", message));
+                // Dequeue the current command if its ID matches the command ID in the response.
+                // If ack is received after a check in/ checkout command, mark the door as open.
+                // If the queue becomes empty, and there's open door, enqueue a door query command for the opened doors.
+                if (message.matches(LockerResponse.RESPONSE_PATTERN)) {
+                    LockerResponse response = new LockerResponse(message);
+                    if (Objects.equals(response.getType(), LockerResponse.RESPONSE_TYPE_CHARGING)) {
+                        Intent intent = new Intent(ACTION_LOCKER_CHARGING);
+                        LocalBroadcastManager.getInstance(mApplicationContext).sendBroadcast(intent);
                     }
-                    break;
-                }
-                case Constants.MESSAGE_CONNECTED: {
-                    Log.d("LockerManager", "connected");
-                    queryBoxStatus(null);
-                    Intent intent = new Intent(ACTION_LOCKER_CONNECTED);
-                    LocalBroadcastManager.getInstance(mApplicationContext).sendBroadcast(intent);
-                    break;
-                }
-                case Constants.MESSAGE_INCOMING_MESSAGE: {
-                    String message = (String) msg.obj;
-                    Log.d("LockerManager", String.format("incoming response:%s", message));
-                    // Dequeue the current command if its ID matches the command ID in the response.
-                    // If ack is received after a check in/ checkout command, mark the door as open.
-                    // If the queue becomes empty, and there's open door, enqueue a door query command for the opened doors.
-                    if (message.matches(LockerResponse.RESPONSE_PATTERN)) {
-                        LockerResponse response = new LockerResponse(message);
-                        if (Objects.equals(response.getType(), LockerResponse.RESPONSE_TYPE_CHARGING)) {
-                            Intent intent = new Intent(ACTION_LOCKER_CHARGING);
-                            LocalBroadcastManager.getInstance(mApplicationContext).sendBroadcast(intent);
-                        }
-                        if (Objects.equals(response.getType(), LockerResponse.RESPONSE_TYPE_DISCHARGING)) {
-                            Intent intent = new Intent(ACTION_LOCKER_DISCHARGING);
-                            LocalBroadcastManager.getInstance(mApplicationContext).sendBroadcast(intent);
-                        }
-                        // monitor box status change, emit door closed event.
-                        List<BoxStatus> boxStatusList = response.getBoxStatus();
-                        if (boxStatusList != null && boxStatusList.size() > 0) {
-                            updateBoxStatus(boxStatusList);
-                        }
-                        // update box status
-                        if (currentCommand != null && Objects.equals(response.getId(), currentCommand.getId())) {
-                            //remove the current command and dequeue
-                            currentCommand = commandQueue.poll();
-                        }
-                        List<String> openBoxes = getOpenBoxes();
-                        if (currentCommand == null && openBoxes.size() > 0) {
-                            queueCommand(new LockerCommand(LockerCommand.COMMAND_TYPE_BOX_STATUS, openBoxes));
-                        }//else, the current command will be fired on the next loop.
+                    if (Objects.equals(response.getType(), LockerResponse.RESPONSE_TYPE_DISCHARGING)) {
+                        Intent intent = new Intent(ACTION_LOCKER_DISCHARGING);
+                        LocalBroadcastManager.getInstance(mApplicationContext).sendBroadcast(intent);
                     }
-                    break;
+                    // monitor box status change, emit door closed event.
+                    List<BoxStatus> boxStatusList = response.getBoxStatus();
+                    if (boxStatusList != null && boxStatusList.size() > 0) {
+                        updateBoxStatus(boxStatusList);
+                    }
+                    // update box status
+                    if (currentCommand != null && Objects.equals(response.getId(), currentCommand.getId())) {
+                        //remove the current command and dequeue
+                        currentCommand = commandQueue.poll();
+                    }
+                    List<String> openBoxes = getOpenBoxes();
+                    if (currentCommand == null && openBoxes.size() > 0) {
+                        queueCommand(new LockerCommand(LockerCommand.COMMAND_TYPE_BOX_STATUS, openBoxes));
+                    }//else, the current command will be fired on the next loop.
                 }
+                break;
+
             }
         }
     }
+
 
     // need reference to application context as LockerManager will live longer than the activity
     public LockerManager(String targetDeviceName, Context applicationContext, boolean useSimulator) {
@@ -155,12 +154,11 @@ public class LockerManager {
     }
 
     public void start() {
-        LockerResponseHandler handler = new LockerResponseHandler();
         boxStatusMap = new HashMap<>();
         if (_useSimulator) {
-            mBluetoothClient = new FakeBTClient(handler, false);
+            mBluetoothClient = new FakeBTClient(this, false);
         } else {
-            mBluetoothClient = new BluetoothClient(handler, _targetDeviceName);
+            mBluetoothClient = new BluetoothClient(this, _targetDeviceName);
         }
         mBluetoothClient.connect();
         mBluetoothClient.getBluetoothBroadcastReceiver()
@@ -200,7 +198,8 @@ public class LockerManager {
         if (currentCommand == null) {
             currentCommand = command;
         } else {
-            commandQueue.offer(command);
+            if (commandQueue != null)
+                commandQueue.offer(command);
         }
     }
 

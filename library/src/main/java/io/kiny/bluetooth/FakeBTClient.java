@@ -4,7 +4,6 @@ import android.bluetooth.BluetoothDevice;
 import android.content.Context;
 import android.content.Intent;
 import android.os.AsyncTask;
-import android.os.Handler;
 import android.util.Log;
 
 import java.util.ArrayList;
@@ -26,7 +25,7 @@ import io.kiny.LockerResponse;
 
 public class FakeBTClient implements BluetoothClientInterface {
     private final String Tag = "FakeBTClient";
-    private final Handler mHandler;
+    private final BluetoothCallback mCallback;
     private final Boolean mSimulateDisconnection;
     private final SafeBroadcastReceiver mBluetoothBroadcastReceiver;
     private int mState;
@@ -35,9 +34,9 @@ public class FakeBTClient implements BluetoothClientInterface {
     private Map<String, Integer> openDoors;
 
 
-    public FakeBTClient(Handler handler, Boolean simulateDisconnection) {
+    public FakeBTClient(BluetoothCallback callback, Boolean simulateDisconnection) {
         mState = STATE_NONE;
-        mHandler = handler;
+        mCallback = callback;
         mSimulateDisconnection = simulateDisconnection;
         mBluetoothBroadcastReceiver = new SafeBroadcastReceiver() {
             @Override
@@ -67,14 +66,12 @@ public class FakeBTClient implements BluetoothClientInterface {
 
     void setState(int state) {
         if (mState == STATE_CONNECTED && state != STATE_CONNECTED) {
-            // if the state was connected and it changed, notify the caller the connect was lost so that
-            // the caller may initiate connect again. we don't want to send noise to the caller because connect is an expensive call.
-            mHandler.obtainMessage(Constants.MESSAGE_CONNECTION_LOST, state).sendToTarget();
+            mCallback.onBluetoothEvent(Constants.MESSAGE_CONNECTION_LOST, null);
             Log.d(Tag, "BT Connection Lost");
         }
         if (mState != STATE_CONNECTED && state == STATE_CONNECTED) {
             connected = new Date();
-            mHandler.obtainMessage(Constants.MESSAGE_CONNECTED, state).sendToTarget();
+            mCallback.onBluetoothEvent(Constants.MESSAGE_CONNECTED, null);
             Log.d(Tag, "BT Connection established");
         }
         mState = state;
@@ -127,7 +124,7 @@ public class FakeBTClient implements BluetoothClientInterface {
                             List<BoxStatus> boxStatusList = new ArrayList<>();
                             boxStatusList.add(new BoxStatus(currentCommand.getBoxes().get(0), BoxStatus.BOX_OPEN));
                             LockerResponse response = new LockerResponse(currentCommand.getId(), LockerResponse.RESPONSE_TYPE_BOX_STATUS, boxStatusList);
-                            mHandler.obtainMessage(Constants.MESSAGE_INCOMING_MESSAGE, response.toString()).sendToTarget();
+                            mCallback.onBluetoothEvent(Constants.MESSAGE_INCOMING_MESSAGE, response.toString());
                             break;
                         }
                         case LockerCommand.COMMAND_TYPE_BOX_STATUS: {
@@ -156,17 +153,17 @@ public class FakeBTClient implements BluetoothClientInterface {
                                 boxStatusList.add(new BoxStatus(box, status));
                             }
                             LockerResponse response = new LockerResponse(currentCommand.getId(), LockerResponse.RESPONSE_TYPE_BOX_STATUS, boxStatusList);
-                            mHandler.obtainMessage(Constants.MESSAGE_INCOMING_MESSAGE, response.toString()).sendToTarget();
+                            mCallback.onBluetoothEvent(Constants.MESSAGE_INCOMING_MESSAGE, response.toString());
                             break;
                         }
                         case LockerCommand.COMMAND_TYPE_CHARGE: {
                             LockerResponse response = new LockerResponse(currentCommand.getId(), LockerResponse.RESPONSE_TYPE_CHARGING, null);
-                            mHandler.obtainMessage(Constants.MESSAGE_INCOMING_MESSAGE, response.toString()).sendToTarget();
+                            mCallback.onBluetoothEvent(Constants.MESSAGE_INCOMING_MESSAGE, response.toString());
                             break;
                         }
                         case LockerCommand.COMMAND_TYPE_DISCHARGE: {
                             LockerResponse response = new LockerResponse(currentCommand.getId(), LockerResponse.RESPONSE_TYPE_DISCHARGING, null);
-                            mHandler.obtainMessage(Constants.MESSAGE_INCOMING_MESSAGE, response.toString()).sendToTarget();
+                            mCallback.onBluetoothEvent(Constants.MESSAGE_INCOMING_MESSAGE, response.toString());
                             break;
                         }
                     }
