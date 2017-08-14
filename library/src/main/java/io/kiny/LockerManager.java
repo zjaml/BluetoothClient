@@ -1,6 +1,5 @@
 package io.kiny;
 
-import android.annotation.SuppressLint;
 import android.bluetooth.BluetoothDevice;
 import android.content.Context;
 import android.content.Intent;
@@ -40,7 +39,7 @@ public class LockerManager {
     private Queue<LockerCommand> commandQueue;
     private LockerCommand currentCommand = null;
     private CommanderThread commanderThread = null;
-    public static final String ACTION_LOCKER_ALL_BOXES_STATUS = "LOCKER_ALL_BOXES_STATUS";
+    public static final String ACTION_LOCKER_READY = "LOCKER_ALL_BOXES_STATUS";
     public static final String ACTION_LOCKER_CONNECTED = "LOCKER_CONNECTED";
     public static final String ACTION_LOCKER_DISCONNECTED = "LOCKER_DISCONNECTED";
     public static final String ACTION_LOCKER_BOX_CLOSED = "LOCKER_BOX_CLOSED";
@@ -76,11 +75,11 @@ public class LockerManager {
                     // If the queue becomes empty, and there's open door, enqueue a door query command for the opened doors.
                     if (message.matches(LockerResponse.RESPONSE_PATTERN)) {
                         LockerResponse response = new LockerResponse(message);
-                        if (response.getType() == LockerResponse.RESPONSE_TYPE_CHARGING) {
+                        if (Objects.equals(response.getType(), LockerResponse.RESPONSE_TYPE_CHARGING)) {
                             Intent intent = new Intent(ACTION_LOCKER_CHARGING);
                             LocalBroadcastManager.getInstance(mApplicationContext).sendBroadcast(intent);
                         }
-                        if (response.getType() == LockerResponse.RESPONSE_TYPE_DISCHARGING) {
+                        if (Objects.equals(response.getType(), LockerResponse.RESPONSE_TYPE_DISCHARGING)) {
                             Intent intent = new Intent(ACTION_LOCKER_DISCHARGING);
                             LocalBroadcastManager.getInstance(mApplicationContext).sendBroadcast(intent);
                         }
@@ -127,7 +126,7 @@ public class LockerManager {
 
     private void updateBoxStatus(List<BoxStatus> boxStatusList) {
         for (BoxStatus newStatus : boxStatusList) {
-            if(boxStatusMap == null){
+            if (boxStatusMap == null) {
                 boxStatusMap = new HashMap<>();
             }
             if (boxStatusMap.containsKey(newStatus.getBoxNumber())) {
@@ -150,7 +149,7 @@ public class LockerManager {
             boxStatusMap.put(newStatus.getBoxNumber(), newStatus);
         }
         if (boxStatusList.size() == 30) {
-            Intent intent = new Intent(ACTION_LOCKER_ALL_BOXES_STATUS);
+            Intent intent = new Intent(ACTION_LOCKER_READY);
             LocalBroadcastManager.getInstance(mApplicationContext).sendBroadcast(intent);
         }
     }
@@ -192,11 +191,6 @@ public class LockerManager {
         return mBluetoothClient != null && mBluetoothClient.getState() == BluetoothClientInterface.STATE_CONNECTED;
     }
 
-    public void queryBoxStatus(List<String> boxes) {
-        LockerCommand command = new LockerCommand(LockerCommand.COMMAND_TYPE_BOX_STATUS, boxes);
-        queueCommand(command);
-    }
-
     public Collection<BoxStatus> getBoxStatus() {
         return boxStatusMap.values();
     }
@@ -210,6 +204,15 @@ public class LockerManager {
         }
     }
 
+    public boolean isReady() {
+        return boxStatusMap != null && boxStatusMap.values().size() == 30;
+    }
+
+    public void queryBoxStatus(List<String> boxes) {
+        LockerCommand command = new LockerCommand(LockerCommand.COMMAND_TYPE_BOX_STATUS, boxes);
+        queueCommand(command);
+    }
+
     private void sendCommand(LockerCommand command) {
         //intentionally drop the command if disconnected,
         if (isBtConnected()) {
@@ -221,6 +224,11 @@ public class LockerManager {
     }
 
     public void requestToCheckIn(String compartmentNumber) {
+        if (!isReady()) {
+            // the locker manager must know all box status to proceed.
+            queryBoxStatus(null);
+            return;
+        }
         if (isBtConnected()) {
             List<String> boxes = Collections.singletonList(compartmentNumber);
             LockerCommand command = new LockerCommand(LockerCommand.COMMAND_TYPE_CHECK_IN, boxes);
@@ -229,6 +237,11 @@ public class LockerManager {
     }
 
     public void requestToCheckOut(String compartmentNumber) {
+        if (!isReady()) {
+            // the locker manager must know all box status to proceed.
+            queryBoxStatus(null);
+            return;
+        }
         if (isBtConnected()) {
             List<String> boxes = Collections.singletonList(compartmentNumber);
             LockerCommand command = new LockerCommand(LockerCommand.COMMAND_TYPE_CHECK_OUT, boxes);

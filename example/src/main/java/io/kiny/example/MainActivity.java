@@ -41,8 +41,8 @@ public class MainActivity extends AppCompatActivity {
         @Override
         public void onReceive(Context context, Intent intent) {
             switch (intent.getAction()) {
-                case LockerManager.ACTION_LOCKER_ALL_BOXES_STATUS:
-                    Log.d("LockerManager", "ACTION_LOCKER_ALL_BOXES_STATUS");
+                case LockerManager.ACTION_LOCKER_READY:
+                    Log.d("LockerManager", "ACTION_LOCKER_READY");
                     Collection<BoxStatus> allBoxStatus = mLockerManager.getBoxStatus();
                     for (BoxStatus boxstatus : allBoxStatus) {
                         updateBoxStatus(boxstatus.getBoxNumber(), boxstatus.getStatus());
@@ -190,7 +190,7 @@ public class MainActivity extends AppCompatActivity {
             }
         }
         IntentFilter intentFilter = new IntentFilter();
-        intentFilter.addAction(LockerManager.ACTION_LOCKER_ALL_BOXES_STATUS);
+        intentFilter.addAction(LockerManager.ACTION_LOCKER_READY);
         intentFilter.addAction(LockerManager.ACTION_LOCKER_BOX_CLOSED);
         intentFilter.addAction(LockerManager.ACTION_LOCKER_BOX_OPENED);
         intentFilter.addAction(LockerManager.ACTION_LOCKER_CHARGING);
