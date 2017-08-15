@@ -185,7 +185,7 @@ public class LockerManager implements BluetoothCallback {
         }
     }
 
-    private boolean isBtConnected() {
+    public boolean isBtConnected() {
         return mBluetoothClient != null && mBluetoothClient.getState() == BluetoothClientInterface.STATE_CONNECTED;
     }
 
@@ -232,6 +232,12 @@ public class LockerManager implements BluetoothCallback {
             List<String> boxes = Collections.singletonList(compartmentNumber);
             LockerCommand command = new LockerCommand(LockerCommand.COMMAND_TYPE_CHECK_IN, boxes);
             queueCommand(command);
+        }
+    }
+
+    public void getReady() {
+        if (!isReady()) {
+            queryBoxStatus(null);
         }
     }
 
