@@ -29,7 +29,7 @@ import java.util.UUID;
  * * None
  * * Connecting  -- background thread is working on connecting in a loop.
  * * Connected  -- Connected thread is established and input/output stream is ready to use.
- *
+ * <p>
  * 4. support connected/disconnected event
  * Communication
  * event for data sent/received over the bluetooth chanel
@@ -42,12 +42,13 @@ import java.util.UUID;
  * -> When disconnected, this class send message to handler, the caller can then recall the connect method
  */
 
+// Connect and disconnect method must be called from UI thread!
+
 public class BluetoothClient implements BluetoothClientInterface {
     private static final UUID SPP_UUID = UUID.fromString("00001101-0000-1000-8000-00805F9B34FB");
     private static final String TAG = "BluetoothClient";
 
     public static final char DELIMITER = '\n';
-    public static final String US_ASCII = "US-ASCII";
     private int mState;
     private final BluetoothAdapter mAdapter;
     private final Handler mHandler;
@@ -76,7 +77,7 @@ public class BluetoothClient implements BluetoothClientInterface {
 
     // define and set state machine so that operations can be controlled base on state,
     // like preventing duplicated connect thread when there's already a connect thread working.
-    public synchronized int getState() {
+    public int getState() {
         return mState;
     }
 
@@ -84,7 +85,7 @@ public class BluetoothClient implements BluetoothClientInterface {
         return mBluetoothBroadcastReceiver;
     }
 
-    private synchronized void setState(int state) {
+    private void setState(int state) {
         Log.d(TAG, "setState() " + mState + " -> " + state);
         if (mState == STATE_CONNECTED && state != STATE_CONNECTED) {
             // if the state was connected and it changed, notify the caller the connect was lost so that
@@ -103,7 +104,7 @@ public class BluetoothClient implements BluetoothClientInterface {
      * @return when bluetooth is ready and target device is paired, return true and start connecting asynchronously,
      * otherwise return false to indicate immediate failure.
      */
-    public synchronized boolean connect() {
+    public boolean connect() {
         // try connect if bluetooth is ready and target device is paired.
         if (mAdapter.getState() != BluetoothAdapter.STATE_ON) {
             //try to asynchronously turn on the bluetooth.
@@ -127,7 +128,7 @@ public class BluetoothClient implements BluetoothClientInterface {
         return true;
     }
 
-    public synchronized void disconnect() {
+    public void disconnect() {
         if (mConnectThread != null) {
             mConnectThread.cancel();
             mConnectThread = null;
@@ -146,7 +147,7 @@ public class BluetoothClient implements BluetoothClientInterface {
      * @param command command to send to device
      * @see ConnectedThread#write(byte[])
      */
-    public synchronized void sendCommand(String command) {
+    public void sendCommand(String command) {
         if (getState() != STATE_CONNECTED)
             return;
         command = command + DELIMITER;
@@ -158,7 +159,7 @@ public class BluetoothClient implements BluetoothClientInterface {
      *
      * @param socket The BluetoothSocket on which the connection was made
      */
-    private synchronized void startConnectedThread(BluetoothSocket socket) {
+    private void startConnectedThread(BluetoothSocket socket) {
         Log.d(TAG, "startConnectedThread");
         disconnect();
         // Start the thread to manage the connection and perform transmissions
@@ -166,7 +167,7 @@ public class BluetoothClient implements BluetoothClientInterface {
         mConnectedThread.start();
     }
 
-    private synchronized BluetoothDevice getTargetDevice() {
+    private BluetoothDevice getTargetDevice() {
         Set<BluetoothDevice> devices = mAdapter.getBondedDevices();
         BluetoothDevice targetDevice = null;
         for (BluetoothDevice device : devices) {
