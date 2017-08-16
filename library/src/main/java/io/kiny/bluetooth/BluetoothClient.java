@@ -5,6 +5,7 @@ import android.bluetooth.BluetoothDevice;
 import android.bluetooth.BluetoothSocket;
 import android.content.Context;
 import android.content.Intent;
+import android.os.Handler;
 import android.util.Log;
 
 import java.io.BufferedReader;
@@ -28,7 +29,7 @@ import java.util.UUID;
  * * None
  * * Connecting  -- background thread is working on connecting in a loop.
  * * Connected  -- Connected thread is established and input/output stream is ready to use.
- * <p>
+ *
  * 4. support connected/disconnected event
  * Communication
  * event for data sent/received over the bluetooth chanel
@@ -49,16 +50,16 @@ public class BluetoothClient implements BluetoothClientInterface {
     public static final String US_ASCII = "US-ASCII";
     private int mState;
     private final BluetoothAdapter mAdapter;
-    private final BluetoothCallback mCallback;
+    private final Handler mHandler;
     private ConnectThread mConnectThread;
     private ConnectedThread mConnectedThread;
     private String mTargetDeviceName;
 
     private SafeBroadcastReceiver mBluetoothBroadcastReceiver = null;
 
-    public BluetoothClient(BluetoothCallback callback, final String targetDeviceName) {
+    public BluetoothClient(Handler handler, final String targetDeviceName) {
         mAdapter = BluetoothAdapter.getDefaultAdapter();
-        mCallback = callback;
+        mHandler = handler;
         mTargetDeviceName = targetDeviceName;
         setState(STATE_NONE);
         mBluetoothBroadcastReceiver = new SafeBroadcastReceiver() {
@@ -86,10 +87,12 @@ public class BluetoothClient implements BluetoothClientInterface {
     private synchronized void setState(int state) {
         Log.d(TAG, "setState() " + mState + " -> " + state);
         if (mState == STATE_CONNECTED && state != STATE_CONNECTED) {
-            mCallback.onBluetoothEvent(Constants.MESSAGE_CONNECTION_LOST, null);
+            // if the state was connected and it changed, notify the caller the connect was lost so that
+            // the caller may initiate connect again. we don't want to send noise to the caller because connect is an expensive call.
+            mHandler.obtainMessage(Constants.MESSAGE_CONNECTION_LOST, state).sendToTarget();
         }
         if (mState != STATE_CONNECTED && state == STATE_CONNECTED) {
-            mCallback.onBluetoothEvent(Constants.MESSAGE_CONNECTED, null);
+            mHandler.obtainMessage(Constants.MESSAGE_CONNECTED, state).sendToTarget();
         }
         mState = state;
     }
@@ -270,7 +273,7 @@ public class BluetoothClient implements BluetoothClientInterface {
                     BufferedReader r = new BufferedReader(new InputStreamReader(mmInStream));
                     String line;
                     while ((line = r.readLine()) != null) {
-                        mCallback.onBluetoothEvent(Constants.MESSAGE_INCOMING_MESSAGE, line);
+                        mHandler.obtainMessage(Constants.MESSAGE_INCOMING_MESSAGE, line).sendToTarget();
                     }
                 } catch (IOException e) {
                     Log.e(TAG, "disconnected", e);
