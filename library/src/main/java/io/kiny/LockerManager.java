@@ -236,9 +236,14 @@ public class LockerManager {
         }
     }
 
-    public void getReady() {
+    public void startPollingForOpenBox() {
         if (!isReady()) {
             queryBoxStatus(null);
+        } else {
+            List<String> openBoxes = getOpenBoxes();
+            if (openBoxes.size() > 0) {
+                queryBoxStatus(openBoxes);
+            }
         }
     }
 
