@@ -33,19 +33,12 @@ public class LockerManager {
     private String _targetDeviceName;
     private LockerCallback _callback;
     private Context _context;
+    private Handler _handler = null;
     private Map<String, BoxStatus> boxStatusMap = null;
     //    private static List<BoxStatus> boxStatusList = null;
     private Queue<LockerCommand> commandQueue;
     private LockerCommand currentCommand = null;
     private CommanderThread commanderThread = null;
-    public static final String ACTION_LOCKER_READY = "LOCKER_ALL_BOXES_STATUS";
-    public static final String ACTION_LOCKER_CONNECTED = "LOCKER_CONNECTED";
-    public static final String ACTION_LOCKER_DISCONNECTED = "LOCKER_DISCONNECTED";
-    public static final String ACTION_LOCKER_BOX_CLOSED = "LOCKER_BOX_CLOSED";
-    public static final String ACTION_LOCKER_BOX_OPENED = "LOCKER_BOX_OPENED";
-    public static final String ACTION_LOCKER_CHARGING = "LOCKER_CHARGING";
-    public static final String ACTION_LOCKER_DISCHARGING = "LOCKER_DISCHARGING";
-
     private class LockerResponseHandler extends Handler {
         public void handleMessage(Message msg) {
             switch (msg.what) {
@@ -75,11 +68,11 @@ public class LockerManager {
                     if (message.matches(LockerResponse.RESPONSE_PATTERN)) {
                         LockerResponse response = new LockerResponse(message);
                         if (Objects.equals(response.getType(), LockerResponse.RESPONSE_TYPE_CHARGING)) {
-                            if(_callback !=null)
+                            if (_callback != null)
                                 _callback.charging();
                         }
                         if (Objects.equals(response.getType(), LockerResponse.RESPONSE_TYPE_DISCHARGING)) {
-                            if(_callback !=null)
+                            if (_callback != null)
                                 _callback.discharging();
                         }
                         // monitor box status change, emit door closed event.
@@ -152,12 +145,12 @@ public class LockerManager {
     }
 
     public void start() {
-        LockerResponseHandler handler = new LockerResponseHandler();
+        _handler = new LockerResponseHandler();
         boxStatusMap = new HashMap<>();
         if (_useSimulator) {
-            mBluetoothClient = new FakeBTClient(handler, false);
+            mBluetoothClient = new FakeBTClient(_handler, false);
         } else {
-            mBluetoothClient = new BluetoothClient(handler, _targetDeviceName);
+            mBluetoothClient = new BluetoothClient(_handler, _targetDeviceName);
         }
         mBluetoothClient.connect();
         mBluetoothClient.getBluetoothBroadcastReceiver()
@@ -177,6 +170,7 @@ public class LockerManager {
         commandQueue = null;
         // clear open doors so that the next time it gets connected, it will re-query the door status.
         boxStatusMap = null;
+        _handler = null;
         currentCommand = null;
         if (commanderThread != null) {
             commanderThread.cancel();
