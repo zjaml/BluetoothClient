@@ -26,6 +26,7 @@ import java.util.Locale;
 import java.util.Objects;
 
 import io.kiny.BoxStatus;
+import io.kiny.LockerCallback;
 import io.kiny.LockerManager;
 
 public class MainActivity extends AppCompatActivity {
@@ -35,52 +36,6 @@ public class MainActivity extends AppCompatActivity {
     private boolean connected = false;
     private boolean charging = false;
     private List<ToggleButton> boxButtons;
-
-    private BroadcastReceiver lockerBroadcastReceiver = new BroadcastReceiver() {
-        @Override
-        public void onReceive(Context context, Intent intent) {
-            switch (intent.getAction()) {
-                case LockerManager.ACTION_LOCKER_READY:
-                    Log.d("LockerManager", "ACTION_LOCKER_READY");
-                    Collection<BoxStatus> allBoxStatus = mLockerManager.getBoxStatus();
-                    for (BoxStatus boxstatus : allBoxStatus) {
-                        updateBoxStatus(boxstatus.getBoxNumber(), boxstatus.getStatus());
-                    }
-                case LockerManager.ACTION_LOCKER_CONNECTED:
-                    connected = true;
-                    setTitle(String.format("%s %s", "Connected",
-                            charging ? "Charging" : "Discharging"));
-                    break;
-                case LockerManager.ACTION_LOCKER_DISCONNECTED:
-                    connected = false;
-                    setTitle(String.format("%s %s",
-                            "Disconnected",
-                            charging ? "Charging" : "Discharging"));
-                    break;
-                case LockerManager.ACTION_LOCKER_CHARGING:
-                    showToast("Charging response received");
-                    break;
-                case LockerManager.ACTION_LOCKER_DISCHARGING:
-                    showToast("Discharging response received");
-                    break;
-                case LockerManager.ACTION_LOCKER_BOX_OPENED: {
-                    String boxNumber = intent.getStringExtra("box");
-                    String log = String.format("%s Box Number:%s \n",
-                            "Opened", boxNumber);
-                    updateBoxStatus(boxNumber, "O");
-                    break;
-                }
-                case LockerManager.ACTION_LOCKER_BOX_CLOSED: {
-                    String boxNumber = intent.getStringExtra("box");
-                    String boxStatus = intent.getStringExtra("status");
-                    String log = String.format("%s Box: %s Status: %s\n",
-                            "Closed", boxNumber, boxStatus);
-                    updateBoxStatus(boxNumber, boxStatus);
-                    break;
-                }
-            }
-        }
-    };
 
     private BroadcastReceiver batteryReceiver = new BroadcastReceiver() {
         @Override
@@ -109,10 +64,55 @@ public class MainActivity extends AppCompatActivity {
         }
     };
 
+    private LockerCallback lockerCallback = new LockerCallback() {
+        @Override
+        public void ready() {
+            Collection<BoxStatus> allBoxStatus = mLockerManager.getBoxStatus();
+            for (BoxStatus boxstatus : allBoxStatus) {
+                updateBoxStatus(boxstatus.getBoxNumber(), boxstatus.getStatus());
+            }
+        }
+
+        @Override
+        public void connected() {
+            connected = true;
+            setTitle(String.format("%s %s", "Connected",
+                    charging ? "Charging" : "Discharging"));
+        }
+
+        @Override
+        public void disconnected() {
+            connected = false;
+            setTitle(String.format("%s %s",
+                    "Disconnected",
+                    charging ? "Charging" : "Discharging"));
+        }
+
+        @Override
+        public void charging() {
+            showToast("Charging response received");
+        }
+
+        @Override
+        public void discharging() {
+            showToast("Discharging response received");
+        }
+
+        @Override
+        public void boxOpened(String box) {
+            updateBoxStatus(box, "O");
+        }
+
+        @Override
+        public void boxClosed(String box, String status) {
+            updateBoxStatus(box, status);
+        }
+    };
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        mLockerManager = new LockerManager(TARGET_DEVICE_NAME, getApplicationContext(), false);
+        mLockerManager = new LockerManager(TARGET_DEVICE_NAME, lockerCallback, this, true);
         mLockerManager.start();
         setContentView(R.layout.activity_main);
         flowLayout = (FlowLayout) findViewById(R.id.flowLayout);
@@ -187,16 +187,6 @@ public class MainActivity extends AppCompatActivity {
                 updateBoxStatus(boxstatus.getBoxNumber(), boxstatus.getStatus());
             }
         }
-        IntentFilter intentFilter = new IntentFilter();
-        intentFilter.addAction(LockerManager.ACTION_LOCKER_READY);
-        intentFilter.addAction(LockerManager.ACTION_LOCKER_BOX_CLOSED);
-        intentFilter.addAction(LockerManager.ACTION_LOCKER_BOX_OPENED);
-        intentFilter.addAction(LockerManager.ACTION_LOCKER_CHARGING);
-        intentFilter.addAction(LockerManager.ACTION_LOCKER_DISCHARGING);
-        intentFilter.addAction(LockerManager.ACTION_LOCKER_CONNECTED);
-        intentFilter.addAction(LockerManager.ACTION_LOCKER_DISCONNECTED);
-
-        LocalBroadcastManager.getInstance(this).registerReceiver(lockerBroadcastReceiver, intentFilter);
 
         IntentFilter batteryIntentFilter = new IntentFilter();
         //monitor battery/charging change
@@ -210,10 +200,10 @@ public class MainActivity extends AppCompatActivity {
     protected void onPause() {
         super.onPause();
         this.unregisterReceiver(batteryReceiver);
-        LocalBroadcastManager.getInstance(this).unregisterReceiver(lockerBroadcastReceiver);
     }
 
     private void showToast(String message) {
         Toast.makeText(this, message, Toast.LENGTH_SHORT).show();
     }
+
 }

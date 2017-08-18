@@ -2,11 +2,9 @@ package io.kiny;
 
 import android.bluetooth.BluetoothDevice;
 import android.content.Context;
-import android.content.Intent;
 import android.content.IntentFilter;
 import android.os.Handler;
 import android.os.Message;
-import android.support.v4.content.LocalBroadcastManager;
 import android.util.Log;
 
 import java.util.ArrayList;
@@ -33,7 +31,8 @@ public class LockerManager {
     private BluetoothClientInterface mBluetoothClient;
     private boolean _useSimulator;
     private String _targetDeviceName;
-    private Context mApplicationContext;
+    private LockerCallback _callback;
+    private Context _context;
     private Map<String, BoxStatus> boxStatusMap = null;
     //    private static List<BoxStatus> boxStatusList = null;
     private Queue<LockerCommand> commandQueue;
@@ -52,8 +51,8 @@ public class LockerManager {
             switch (msg.what) {
                 case Constants.MESSAGE_CONNECTION_LOST: {
                     Log.d("LockerManager", "connection lost");
-                    Intent intent = new Intent(ACTION_LOCKER_DISCONNECTED);
-                    LocalBroadcastManager.getInstance(mApplicationContext).sendBroadcast(intent);
+                    if (_callback != null)
+                        _callback.disconnected();
                     // reconnect since connection is lost
                     if (mBluetoothClient != null) {
                         mBluetoothClient.connect();
@@ -63,8 +62,8 @@ public class LockerManager {
                 case Constants.MESSAGE_CONNECTED: {
                     Log.d("LockerManager", "connected");
                     queryBoxStatus(null);
-                    Intent intent = new Intent(ACTION_LOCKER_CONNECTED);
-                    LocalBroadcastManager.getInstance(mApplicationContext).sendBroadcast(intent);
+                    if (_callback != null)
+                        _callback.connected();
                     break;
                 }
                 case Constants.MESSAGE_INCOMING_MESSAGE: {
@@ -76,12 +75,12 @@ public class LockerManager {
                     if (message.matches(LockerResponse.RESPONSE_PATTERN)) {
                         LockerResponse response = new LockerResponse(message);
                         if (Objects.equals(response.getType(), LockerResponse.RESPONSE_TYPE_CHARGING)) {
-                            Intent intent = new Intent(ACTION_LOCKER_CHARGING);
-                            LocalBroadcastManager.getInstance(mApplicationContext).sendBroadcast(intent);
+                            if(_callback !=null)
+                                _callback.charging();
                         }
                         if (Objects.equals(response.getType(), LockerResponse.RESPONSE_TYPE_DISCHARGING)) {
-                            Intent intent = new Intent(ACTION_LOCKER_DISCHARGING);
-                            LocalBroadcastManager.getInstance(mApplicationContext).sendBroadcast(intent);
+                            if(_callback !=null)
+                                _callback.discharging();
                         }
                         // monitor box status change, emit door closed event.
                         List<BoxStatus> boxStatusList = response.getBoxStatus();
@@ -105,8 +104,9 @@ public class LockerManager {
     }
 
     // need reference to application context as LockerManager will live longer than the activity
-    public LockerManager(String targetDeviceName, Context applicationContext, boolean useSimulator) {
-        mApplicationContext = applicationContext;
+    public LockerManager(String targetDeviceName, LockerCallback callback, Context context, boolean useSimulator) {
+        _context = context;
+        _callback = callback;
         _useSimulator = useSimulator;
         _targetDeviceName = targetDeviceName;
     }
@@ -134,23 +134,20 @@ public class LockerManager {
                 if (!Objects.equals(old.getStatus(), newStatus.getStatus())) {
                     if (Objects.equals(newStatus.getStatus(), BoxStatus.BOX_OPEN)) {
                         Log.d("LockerManager", String.format("Box %s opened!", newStatus.getBoxNumber()));
-                        Intent intent = new Intent(ACTION_LOCKER_BOX_OPENED);
-                        intent.putExtra("box", newStatus.getBoxNumber());
-                        LocalBroadcastManager.getInstance(mApplicationContext).sendBroadcast(intent);
+                        if (_callback != null)
+                            _callback.boxOpened(newStatus.getBoxNumber());
                     } else {
                         Log.d("LockerManager", String.format("Box %s closed, %s!", newStatus.getBoxNumber(), newStatus.getStatus()));
-                        Intent intent = new Intent(ACTION_LOCKER_BOX_CLOSED);
-                        intent.putExtra("box", newStatus.getBoxNumber());
-                        intent.putExtra("status", newStatus.getStatus());
-                        LocalBroadcastManager.getInstance(mApplicationContext).sendBroadcast(intent);
+                        if (_callback != null)
+                            _callback.boxClosed(newStatus.getBoxNumber(), newStatus.getStatus());
                     }
                 }
             }
             boxStatusMap.put(newStatus.getBoxNumber(), newStatus);
         }
         if (boxStatusList.size() == 30) {
-            Intent intent = new Intent(ACTION_LOCKER_READY);
-            LocalBroadcastManager.getInstance(mApplicationContext).sendBroadcast(intent);
+            if (_callback != null)
+                _callback.ready();
         }
     }
 
@@ -164,7 +161,7 @@ public class LockerManager {
         }
         mBluetoothClient.connect();
         mBluetoothClient.getBluetoothBroadcastReceiver()
-                .safeRegister(mApplicationContext, new IntentFilter(BluetoothDevice.ACTION_ACL_DISCONNECTED));
+                .safeRegister(_context, new IntentFilter(BluetoothDevice.ACTION_ACL_DISCONNECTED));
         commandQueue = new ConcurrentLinkedDeque<>();
         commanderThread = new CommanderThread();
         commanderThread.start();
@@ -173,7 +170,7 @@ public class LockerManager {
     public void stop() {
         if (mBluetoothClient != null) {
             mBluetoothClient.disconnect();
-            mBluetoothClient.getBluetoothBroadcastReceiver().safeUnregister(mApplicationContext);
+            mBluetoothClient.getBluetoothBroadcastReceiver().safeUnregister(_context);
             mBluetoothClient = null;
         }
         commandQueue.clear();
