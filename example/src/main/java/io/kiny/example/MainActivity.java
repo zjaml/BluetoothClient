@@ -8,11 +8,11 @@ import android.content.Intent;
 import android.content.IntentFilter;
 import android.os.BatteryManager;
 import android.os.Bundle;
-import android.support.v4.content.LocalBroadcastManager;
 import android.support.v7.app.AppCompatActivity;
 import android.util.Log;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.Button;
 import android.widget.Toast;
 import android.widget.ToggleButton;
 
@@ -36,6 +36,7 @@ public class MainActivity extends AppCompatActivity {
     private boolean connected = false;
     private boolean charging = false;
     private List<ToggleButton> boxButtons;
+    private Button btnSwitchMode;
 
     private BroadcastReceiver batteryReceiver = new BroadcastReceiver() {
         @Override
@@ -108,21 +109,25 @@ public class MainActivity extends AppCompatActivity {
             updateBoxStatus(box, status);
         }
     };
+    private int _numberOfBoxes;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        mLockerManager = new LockerManager(TARGET_DEVICE_NAME, lockerCallback, this, true);
+        _numberOfBoxes = 30;
+        mLockerManager = new LockerManager(TARGET_DEVICE_NAME, lockerCallback, this, true, _numberOfBoxes);
         mLockerManager.start();
         setContentView(R.layout.activity_main);
         flowLayout = (FlowLayout) findViewById(R.id.flowLayout);
+        btnSwitchMode = (Button) findViewById(R.id.switch_mode_btn);
+        btnSwitchMode.setText("Switch to 6 compartment mode");
         initBoxes();
     }
 
     private void initBoxes() {
         boxButtons = new ArrayList<>();
-
-        for (int i = 1; i <= 30; i++) {
+        flowLayout.removeAllViews();
+        for (int i = 1; i <= _numberOfBoxes; i++) {
             final MyToggleButton boxButton = new MyToggleButton(this);
             FlowLayout.LayoutParams layoutParams = new FlowLayout.LayoutParams(
                     ViewGroup.LayoutParams.WRAP_CONTENT,
@@ -170,6 +175,26 @@ public class MainActivity extends AppCompatActivity {
         boxButton.setChecked(Objects.equals(boxStatus, BoxStatus.BOX_OPEN));
     }
 
+    public void onSwitchMode(View view) {
+        mLockerManager.stop();
+        try {
+            Thread.sleep(1000);
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
+        mLockerManager = null;
+        if (_numberOfBoxes == 30) {
+            _numberOfBoxes = 6;
+            btnSwitchMode.setText("Switch to 30 compartments mode");
+        } else {
+            _numberOfBoxes = 30;
+            btnSwitchMode.setText("Switch to 6 compartments mode");
+        }
+        initBoxes();
+        mLockerManager = new LockerManager(TARGET_DEVICE_NAME, lockerCallback, this, true, _numberOfBoxes);
+        mLockerManager.start();
+
+    }
 
     @Override
     protected void onDestroy() {

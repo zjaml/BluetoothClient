@@ -28,6 +28,7 @@ import io.kiny.bluetooth.FakeBTClient;
  */
 
 public class LockerManager {
+    private final int _numberOfBoxes;
     private BluetoothClientInterface mBluetoothClient;
     private boolean _useSimulator;
     private String _targetDeviceName;
@@ -97,11 +98,12 @@ public class LockerManager {
     }
 
     // need reference to application context as LockerManager will live longer than the activity
-    public LockerManager(String targetDeviceName, LockerCallback callback, Context context, boolean useSimulator) {
+    public LockerManager(String targetDeviceName, LockerCallback callback, Context context, boolean useSimulator, int numberOfBoxes) {
         _context = context;
         _callback = callback;
         _useSimulator = useSimulator;
         _targetDeviceName = targetDeviceName;
+        _numberOfBoxes = numberOfBoxes;
     }
 
     private List<String> getOpenBoxes() {
@@ -138,7 +140,7 @@ public class LockerManager {
             }
             boxStatusMap.put(newStatus.getBoxNumber(), newStatus);
         }
-        if (boxStatusList.size() == 30) {
+        if (boxStatusList.size() == _numberOfBoxes) {
             if (_callback != null)
                 _callback.ready();
         }
@@ -148,7 +150,7 @@ public class LockerManager {
         _handler = new LockerResponseHandler();
         boxStatusMap = new HashMap<>();
         if (_useSimulator) {
-            mBluetoothClient = new FakeBTClient(_handler, false);
+            mBluetoothClient = new FakeBTClient(_handler, false, _numberOfBoxes);
         } else {
             mBluetoothClient = new BluetoothClient(_handler, _targetDeviceName);
         }
@@ -196,7 +198,7 @@ public class LockerManager {
     }
 
     public boolean isReady() {
-        return boxStatusMap != null && boxStatusMap.values().size() == 30;
+        return boxStatusMap != null && boxStatusMap.values().size() == _numberOfBoxes;
     }
 
     public void queryBoxStatus(List<String> boxes) {
