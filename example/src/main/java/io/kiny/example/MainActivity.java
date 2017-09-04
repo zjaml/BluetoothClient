@@ -8,14 +8,13 @@ import android.content.Intent;
 import android.content.IntentFilter;
 import android.os.BatteryManager;
 import android.os.Bundle;
-import android.support.v4.content.LocalBroadcastManager;
 import android.support.v7.app.AppCompatActivity;
 import android.util.Log;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.Button;
 import android.widget.Toast;
 import android.widget.ToggleButton;
-
 
 import com.wefika.flowlayout.FlowLayout;
 
@@ -33,10 +32,11 @@ public class MainActivity extends AppCompatActivity {
     public static final String TARGET_DEVICE_NAME = "HC-06";
     private LockerManager mLockerManager;
     FlowLayout flowLayout;
+    Button switchModeButton;
     private boolean connected = false;
     private boolean charging = false;
     private List<ToggleButton> boxButtons;
-
+    private int numberOfBoxes = 30;
     private BroadcastReceiver batteryReceiver = new BroadcastReceiver() {
         @Override
         public void onReceive(Context context, Intent intent) {
@@ -116,13 +116,22 @@ public class MainActivity extends AppCompatActivity {
         mLockerManager.start();
         setContentView(R.layout.activity_main);
         flowLayout = (FlowLayout) findViewById(R.id.flowLayout);
+        switchModeButton = (Button) findViewById(R.id.switchModeButton);
+        switchModeButton.setText("Switch to 6 compartment mode");
         initBoxes();
+    }
+
+    public void onSwitchMode(View view) {
+        Log.d("Main", "onSwitchMode");
+        numberOfBoxes = numberOfBoxes == 30 ? 6 : 30;
+        mLockerManager.setNumberOfBoxes(numberOfBoxes);
+        switchModeButton.setText(numberOfBoxes == 30 ? "Switch to 6 compartment mode" : "Switch to 30 compartment mode");
     }
 
     private void initBoxes() {
         boxButtons = new ArrayList<>();
 
-        for (int i = 1; i <= 30; i++) {
+        for (int i = 1; i <= numberOfBoxes; i++) {
             final MyToggleButton boxButton = new MyToggleButton(this);
             FlowLayout.LayoutParams layoutParams = new FlowLayout.LayoutParams(
                     ViewGroup.LayoutParams.WRAP_CONTENT,
