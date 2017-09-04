@@ -29,13 +29,14 @@ public class FakeBTClient implements BluetoothClientInterface {
     private final Handler mHandler;
     private final Boolean mSimulateDisconnection;
     private final SafeBroadcastReceiver mBluetoothBroadcastReceiver;
+    private final int _numberOfBoxes;
     private int mState;
     private Date connected;
 
     private Map<String, Integer> openDoors;
 
 
-    public FakeBTClient(Handler handler, Boolean simulateDisconnection) {
+    public FakeBTClient(Handler handler, Boolean simulateDisconnection, int numberOfBoxes) {
         mState = STATE_NONE;
         mHandler = handler;
         mSimulateDisconnection = simulateDisconnection;
@@ -53,6 +54,7 @@ public class FakeBTClient implements BluetoothClientInterface {
         openDoors.put("05", 30000);
         openDoors.put("10", 20000);
         openDoors.put("29", 60000);
+        _numberOfBoxes = numberOfBoxes;
     }
 
     @Override
@@ -134,7 +136,7 @@ public class FakeBTClient implements BluetoothClientInterface {
                             List<String> boxes = currentCommand.getBoxes();
                             if (boxes == null) {
                                 boxes = new ArrayList<>();
-                                for (int i = 1; i <= 30; i++) {
+                                for (int i = 1; i <= _numberOfBoxes; i++) {
                                     boxes.add(String.format(Locale.US, "%02d", i));
                                 }
                             }
