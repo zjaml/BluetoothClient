@@ -115,7 +115,7 @@ public class MainActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         _numberOfBoxes = 30;
-        mLockerManager = new LockerManager(TARGET_DEVICE_NAME, lockerCallback, this, true, _numberOfBoxes);
+        mLockerManager = new LockerManager(TARGET_DEVICE_NAME, lockerCallback, this, false, _numberOfBoxes);
         mLockerManager.start();
         setContentView(R.layout.activity_main);
         flowLayout = (FlowLayout) findViewById(R.id.flowLayout);
