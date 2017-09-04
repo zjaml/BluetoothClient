@@ -39,7 +39,6 @@ public class LockerManager {
     private Queue<LockerCommand> commandQueue;
     private LockerCommand currentCommand = null;
     private CommanderThread commanderThread = null;
-    private int _numberOfBoxes;
     private class LockerResponseHandler extends Handler {
         public void handleMessage(Message msg) {
             switch (msg.what) {
@@ -103,7 +102,6 @@ public class LockerManager {
         _callback = callback;
         _useSimulator = useSimulator;
         _targetDeviceName = targetDeviceName;
-        _numberOfBoxes = 30;
     }
 
     private List<String> getOpenBoxes() {
@@ -140,7 +138,7 @@ public class LockerManager {
             }
             boxStatusMap.put(newStatus.getBoxNumber(), newStatus);
         }
-        if (boxStatusList.size() == _numberOfBoxes) {
+        if (boxStatusList.size() == 30) {
             if (_callback != null)
                 _callback.ready();
         }
@@ -198,7 +196,7 @@ public class LockerManager {
     }
 
     public boolean isReady() {
-        return boxStatusMap != null && boxStatusMap.values().size() == _numberOfBoxes;
+        return boxStatusMap != null && boxStatusMap.values().size() == 30;
     }
 
     public void queryBoxStatus(List<String> boxes) {
@@ -214,13 +212,6 @@ public class LockerManager {
         }
         // so that the queue can always be consumed fast.
         command.recordSent();
-    }
-
-    // for configuration of 6 door lockers.
-    public void setNumberOfBoxes(int numberOfBoxes){
-        _numberOfBoxes = numberOfBoxes;
-        boxStatusMap = null;
-        queryBoxStatus(null);
     }
 
     public void requestToCheckIn(String compartmentNumber) {
