@@ -191,7 +191,7 @@ public class MainActivity extends AppCompatActivity {
             btnSwitchMode.setText("Switch to 6 compartments mode");
         }
         initBoxes();
-        mLockerManager = new LockerManager(TARGET_DEVICE_NAME, lockerCallback, this, true, _numberOfBoxes);
+        mLockerManager = new LockerManager(TARGET_DEVICE_NAME, lockerCallback, this, false, _numberOfBoxes);
         mLockerManager.start();
 
     }
