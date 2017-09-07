@@ -12,13 +12,15 @@ public class BoxStatus {
     private String _status;
     public static final String BOX_STATUS_PATTERN = "(\\d{2})(E|F|O)";
 
-    public BoxStatus(String boxStatus) {
+    public BoxStatus(String boxStatus) throws InvalidLockerResponseException {
         Pattern r = Pattern.compile(BOX_STATUS_PATTERN);
         // Now create matcher object.
         Matcher m = r.matcher(boxStatus);
         if (m.find()) {
             _boxNumber = m.group(1);
             _status = m.group(2);
+        }else{
+            throw new InvalidLockerResponseException();
         }
     }
 

@@ -18,6 +18,8 @@ import java.util.Objects;
 import java.util.Set;
 import java.util.UUID;
 
+import io.kiny.LoggerUtil;
+
 /**
  * Created by JZhao on 2/7/2017.
  * This class handles connection management and communication with the android board over Bluetooth
@@ -67,7 +69,7 @@ public class BluetoothClient implements BluetoothClientInterface {
             @Override
             public void onReceive(Context context, Intent intent) {
                 if (Objects.equals(intent.getAction(), BluetoothDevice.ACTION_ACL_DISCONNECTED)) {
-                    Log.d(TAG, "bluetooth disconnection detected!");
+                    LoggerUtil.d(this.getClass().getSimpleName(), "bluetooth disconnection detected!");
                     // todo: crash report.
                     setState(STATE_NONE);
                 }
@@ -86,7 +88,7 @@ public class BluetoothClient implements BluetoothClientInterface {
     }
 
     private void setState(int state) {
-        Log.d(TAG, "setState() " + mState + " -> " + state);
+        LoggerUtil.d(this.getClass().getSimpleName(), "setState() " + mState + " -> " + state);
         if (mState == STATE_CONNECTED && state != STATE_CONNECTED) {
             // if the state was connected and it changed, notify the caller the connect was lost so that
             // the caller may initiate connect again. we don't want to send noise to the caller because connect is an expensive call.
@@ -160,7 +162,7 @@ public class BluetoothClient implements BluetoothClientInterface {
      * @param socket The BluetoothSocket on which the connection was made
      */
     private void startConnectedThread(BluetoothSocket socket) {
-        Log.d(TAG, "startConnectedThread");
+        LoggerUtil.d(this.getClass().getSimpleName(), "startConnectedThread");
         disconnect();
         // Start the thread to manage the connection and perform transmissions
         mConnectedThread = new ConnectedThread(socket);
@@ -249,7 +251,7 @@ public class BluetoothClient implements BluetoothClientInterface {
         private final OutputStream mmOutStream;
 
         public ConnectedThread(BluetoothSocket socket) {
-            Log.d(TAG, "create startConnectedThread thread");
+            LoggerUtil.d(this.getClass().getSimpleName(), "create startConnectedThread thread");
             mmSocket = socket;
             InputStream tmpIn = null;
             OutputStream tmpOut = null;
