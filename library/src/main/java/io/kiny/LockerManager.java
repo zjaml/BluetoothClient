@@ -45,7 +45,7 @@ public class LockerManager {
         public void handleMessage(Message msg) {
             switch (msg.what) {
                 case Constants.MESSAGE_CONNECTION_LOST: {
-                    Log.d("LockerManager", "connection lost");
+                    LoggerUtil.d(this.getClass().getSimpleName(), "connection lost");
                     if (_callback != null)
                         _callback.disconnected();
                     // reconnect since connection is lost
@@ -55,7 +55,7 @@ public class LockerManager {
                     break;
                 }
                 case Constants.MESSAGE_CONNECTED: {
-                    Log.d("LockerManager", "connected");
+                    LoggerUtil.d(this.getClass().getSimpleName(), "connected");
                     queryBoxStatus(null);
                     if (_callback != null)
                         _callback.connected();
@@ -63,7 +63,7 @@ public class LockerManager {
                 }
                 case Constants.MESSAGE_INCOMING_MESSAGE: {
                     String message = (String) msg.obj;
-                    Log.d("LockerManager", String.format("incoming response:%s", message));
+                    LoggerUtil.d(this.getClass().getSimpleName(), String.format("incoming response:%s", message));
                     // Dequeue the current command if its ID matches the command ID in the response.
                     // If ack is received after a check in/ checkout command, mark the door as open.
                     // If the queue becomes empty, and there's open door, enqueue a door query command for the opened doors.
@@ -134,11 +134,11 @@ public class LockerManager {
                 BoxStatus old = boxStatusMap.get(newStatus.getBoxNumber());
                 if (!Objects.equals(old.getStatus(), newStatus.getStatus())) {
                     if (Objects.equals(newStatus.getStatus(), BoxStatus.BOX_OPEN)) {
-                        Log.d("LockerManager", String.format("Box %s opened!", newStatus.getBoxNumber()));
+                        LoggerUtil.d(this.getClass().getSimpleName(), String.format("Box %s opened!", newStatus.getBoxNumber()));
                         if (_callback != null)
                             _callback.boxOpened(newStatus.getBoxNumber());
                     } else {
-                        Log.d("LockerManager", String.format("Box %s closed, %s!", newStatus.getBoxNumber(), newStatus.getStatus()));
+                        LoggerUtil.d(this.getClass().getSimpleName(), String.format("Box %s closed, %s!", newStatus.getBoxNumber(), newStatus.getStatus()));
                         if (_callback != null)
                             _callback.boxClosed(newStatus.getBoxNumber(), newStatus.getStatus());
                     }
@@ -215,7 +215,7 @@ public class LockerManager {
     private void sendCommand(LockerCommand command) {
         //intentionally drop the command if disconnected,
         if (isBtConnected()) {
-            Log.d("LockerManager", String.format("sending command:%s", command.toString()));
+            LoggerUtil.d(this.getClass().getSimpleName(), String.format("sending command:%s", command.toString()));
             mBluetoothClient.sendCommand(command.toString());
         }
         // so that the queue can always be consumed fast.

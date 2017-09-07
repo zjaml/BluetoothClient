@@ -11,7 +11,7 @@ import java.util.Locale;
  */
 
 public class LoggerUtil {
-    static void d(String tag, String message) {
+    public static void d(String tag, String message) {
         SimpleDateFormat formatter = new SimpleDateFormat("dd/MM/yy HH:mm", Locale.US);
         Log.d(tag, String.format("%s %s", formatter.format((new Date())), message));
     }
