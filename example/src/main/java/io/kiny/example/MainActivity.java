@@ -28,6 +28,7 @@ import java.util.Objects;
 import io.kiny.BoxStatus;
 import io.kiny.LockerCallback;
 import io.kiny.LockerManager;
+import io.kiny.LoggerUtil;
 
 public class MainActivity extends AppCompatActivity {
     public static final String TARGET_DEVICE_NAME = "HC-06";
@@ -55,7 +56,7 @@ public class MainActivity extends AppCompatActivity {
                     int level = intent.getIntExtra(BatteryManager.EXTRA_LEVEL, -1);
                     int scale = intent.getIntExtra(BatteryManager.EXTRA_SCALE, -1);
                     float batteryPct = level / (float) scale;
-                    Log.d("Battery", String.format("Battery: %.0f%%", batteryPct * 100));
+                    LoggerUtil.d(this.getClass().getSimpleName(), String.format(Locale.US, "Battery: %.0f%%", batteryPct * 100));
                     if (batteryPct < 0.5 && !charging) {
                         mLockerManager.requestToCharge();
                     } else if (batteryPct > 0.55 && charging) {
@@ -107,6 +108,11 @@ public class MainActivity extends AppCompatActivity {
         @Override
         public void boxClosed(String box, String status) {
             updateBoxStatus(box, status);
+        }
+
+        @Override
+        public void onException(String errorMessage) {
+            LoggerUtil.e("MainActivity", errorMessage);
         }
     };
     private int _numberOfBoxes;

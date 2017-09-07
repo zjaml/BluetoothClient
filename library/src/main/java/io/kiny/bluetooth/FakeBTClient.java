@@ -18,6 +18,7 @@ import java.util.Objects;
 import io.kiny.BoxStatus;
 import io.kiny.LockerCommand;
 import io.kiny.LockerResponse;
+import io.kiny.LoggerUtil;
 
 /**
  * Created by JZhao on 2/20/2017.
@@ -44,7 +45,7 @@ public class FakeBTClient implements BluetoothClientInterface {
             @Override
             public void onReceive(Context context, Intent intent) {
                 if (Objects.equals(intent.getAction(), BluetoothDevice.ACTION_ACL_DISCONNECTED)) {
-                    Log.d(Tag, "bluetooth disconnection detected!");
+                    LoggerUtil.d(this.getClass().getSimpleName(), "bluetooth disconnection detected!");
                     setState(STATE_NONE);
                 }
             }
@@ -72,12 +73,12 @@ public class FakeBTClient implements BluetoothClientInterface {
             // if the state was connected and it changed, notify the caller the connect was lost so that
             // the caller may initiate connect again. we don't want to send noise to the caller because connect is an expensive call.
             mHandler.obtainMessage(Constants.MESSAGE_CONNECTION_LOST, state).sendToTarget();
-            Log.d(Tag, "BT Connection Lost");
+            LoggerUtil.d(this.getClass().getSimpleName(), "BT Connection Lost");
         }
         if (mState != STATE_CONNECTED && state == STATE_CONNECTED) {
             connected = new Date();
             mHandler.obtainMessage(Constants.MESSAGE_CONNECTED, state).sendToTarget();
-            Log.d(Tag, "BT Connection established");
+            LoggerUtil.d(this.getClass().getSimpleName(), "BT Connection established");
         }
         mState = state;
     }
