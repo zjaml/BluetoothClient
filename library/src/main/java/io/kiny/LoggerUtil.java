@@ -12,7 +12,12 @@ import java.util.Locale;
 
 public class LoggerUtil {
     public static void d(String tag, String message) {
-        SimpleDateFormat formatter = new SimpleDateFormat("dd/MM/yy HH:mm", Locale.US);
+        SimpleDateFormat formatter = new SimpleDateFormat("HH:mm:ss:SSS", Locale.US);
         Log.d(tag, String.format("%s %s", formatter.format((new Date())), message));
+    }
+
+    public static void e(String tag, String message) {
+        SimpleDateFormat formatter = new SimpleDateFormat("HH:mm:ss:SSS", Locale.US);
+        Log.e(tag, String.format("%s %s", formatter.format((new Date())), message));
     }
 }

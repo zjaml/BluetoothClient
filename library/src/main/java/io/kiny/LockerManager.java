@@ -87,14 +87,15 @@ public class LockerManager {
                                 //remove the current command and dequeue
                                 currentCommand = commandQueue.poll();
                             }
-                            List<String> openBoxes = getOpenBoxes();
-                            if (currentCommand == null && openBoxes.size() > 0) {
-                                queueCommand(new LockerCommand(LockerCommand.COMMAND_TYPE_BOX_STATUS, openBoxes));
-                            }//else, the current command will be fired on the next loop.
                         } catch (InvalidLockerResponseException e) {
                             if (_callback != null) {
                                 _callback.onException(String.format("Error response from Locker: %s", message));
                             }
+                        }
+                        // continue to query status for open doors.
+                        List<String> openBoxes = getOpenBoxes();
+                        if (currentCommand == null && openBoxes.size() > 0) {
+                            queueCommand(new LockerCommand(LockerCommand.COMMAND_TYPE_BOX_STATUS, openBoxes));
                         }
                     }
                     break;
