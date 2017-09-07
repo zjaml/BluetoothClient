@@ -112,7 +112,7 @@ public class MainActivity extends AppCompatActivity {
 
         @Override
         public void onException(String errorMessage) {
-            LoggerUtil.d(this.getClass().getSimpleName(), errorMessage);
+            LoggerUtil.e("MainActivity", errorMessage);
         }
     };
     private int _numberOfBoxes;
