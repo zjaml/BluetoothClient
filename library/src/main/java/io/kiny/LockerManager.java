@@ -40,6 +40,7 @@ public class LockerManager {
     private Queue<LockerCommand> commandQueue;
     private LockerCommand currentCommand = null;
     private CommanderThread commanderThread = null;
+
     private class LockerResponseHandler extends Handler {
         public void handleMessage(Message msg) {
             switch (msg.what) {

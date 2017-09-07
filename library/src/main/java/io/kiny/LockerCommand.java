@@ -16,6 +16,8 @@ public class LockerCommand {
     public static final String COMMAND_TYPE_BOX_STATUS = "B";
     public static final String COMMAND_TYPE_DISCHARGE = "H";
     public static final String COMMAND_TYPE_CHARGE = "L";
+    public static final int COMMAND_MAX_DURATION = 2000;
+
     private static int counter = 0;
     private String _id;
     private String _type;
@@ -62,7 +64,7 @@ public class LockerCommand {
     public boolean expired() {
         long now = new Date().getTime();
         long sent = _sent.getTime();
-        return sent + _lifeSpanInSeconds * 1000 > now;
+        return sent + _lifeSpanInSeconds * COMMAND_MAX_DURATION > now;
     }
 
     @Override
