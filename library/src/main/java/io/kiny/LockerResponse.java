@@ -25,7 +25,7 @@ public class LockerResponse {
     private String _type;
     private List<BoxStatus> _boxStatus;
 
-    public LockerResponse(String response) {
+    public LockerResponse(String response) throws InvalidLockerResponseException {
         Pattern r = Pattern.compile(RESPONSE_PATTERN);
         // Now create matcher object.
         Matcher m = r.matcher(response);

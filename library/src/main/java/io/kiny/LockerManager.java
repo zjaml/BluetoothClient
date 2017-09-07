@@ -68,29 +68,34 @@ public class LockerManager {
                     // If ack is received after a check in/ checkout command, mark the door as open.
                     // If the queue becomes empty, and there's open door, enqueue a door query command for the opened doors.
                     if (message.matches(LockerResponse.RESPONSE_PATTERN)) {
-                        LockerResponse response = new LockerResponse(message);
-                        if (Objects.equals(response.getType(), LockerResponse.RESPONSE_TYPE_CHARGING)) {
-                            if (_callback != null)
-                                _callback.charging();
+                        try {
+                            LockerResponse response = new LockerResponse(message);
+                            if (Objects.equals(response.getType(), LockerResponse.RESPONSE_TYPE_CHARGING)) {
+                                if (_callback != null)
+                                    _callback.charging();
+                            }
+                            if (Objects.equals(response.getType(), LockerResponse.RESPONSE_TYPE_DISCHARGING)) {
+                                if (_callback != null)
+                                    _callback.discharging();
+                            }
+                            // monitor box status change, emit door closed event.
+                            List<BoxStatus> boxStatusList = response.getBoxStatus();
+                            if (boxStatusList != null && boxStatusList.size() > 0) {
+                                updateBoxStatus(boxStatusList);
+                            }
+                            if (currentCommand != null && Objects.equals(response.getId(), currentCommand.getId())) {
+                                //remove the current command and dequeue
+                                currentCommand = commandQueue.poll();
+                            }
+                            List<String> openBoxes = getOpenBoxes();
+                            if (currentCommand == null && openBoxes.size() > 0) {
+                                queueCommand(new LockerCommand(LockerCommand.COMMAND_TYPE_BOX_STATUS, openBoxes));
+                            }//else, the current command will be fired on the next loop.
+                        } catch (InvalidLockerResponseException e) {
+                            if (_callback != null) {
+                                _callback.onException(String.format("Error response from Locker: %s", message));
+                            }
                         }
-                        if (Objects.equals(response.getType(), LockerResponse.RESPONSE_TYPE_DISCHARGING)) {
-                            if (_callback != null)
-                                _callback.discharging();
-                        }
-                        // monitor box status change, emit door closed event.
-                        List<BoxStatus> boxStatusList = response.getBoxStatus();
-                        if (boxStatusList != null && boxStatusList.size() > 0) {
-                            updateBoxStatus(boxStatusList);
-                        }
-                        // update box status
-                        if (currentCommand != null && Objects.equals(response.getId(), currentCommand.getId())) {
-                            //remove the current command and dequeue
-                            currentCommand = commandQueue.poll();
-                        }
-                        List<String> openBoxes = getOpenBoxes();
-                        if (currentCommand == null && openBoxes.size() > 0) {
-                            queueCommand(new LockerCommand(LockerCommand.COMMAND_TYPE_BOX_STATUS, openBoxes));
-                        }//else, the current command will be fired on the next loop.
                     }
                     break;
                 }
