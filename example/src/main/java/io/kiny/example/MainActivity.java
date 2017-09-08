@@ -202,6 +202,13 @@ public class MainActivity extends AppCompatActivity {
 
     }
 
+    public void onRequestCharging(View view){
+        mLockerManager.requestToCharge();
+    }
+
+    public void onRequestDischarging(View view){
+        mLockerManager.requestToDischarge();
+    }
     @Override
     protected void onDestroy() {
         super.onDestroy();
