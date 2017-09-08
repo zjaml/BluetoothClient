@@ -25,11 +25,27 @@
             android:layout_weight="1">
 
         </com.wefika.flowlayout.FlowLayout>
+        <com.wefika.flowlayout.FlowLayout xmlns:android="http://schemas.android.com/apk/res/android"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content">
         <Button
             android:id="@+id/switch_mode_btn"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:onClick="onSwitchMode"/>
+        <Button
+            android:id="@+id/charge_button"
+            android:text="Charge"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:onClick="onRequestCharging"/>
+        <Button
+            android:id="@+id/discharge_button"
+            android:text="Discharge"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:onClick="onRequestDischarging"/>
+        </com.wefika.flowlayout.FlowLayout>
     </LinearLayout>
 
 
