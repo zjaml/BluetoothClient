@@ -274,6 +274,20 @@ public class LockerManager {
         }
     }
 
+    public void startBuzzer() {
+        if (isBtConnected()) {
+            LockerCommand command = new LockerCommand(LockerCommand.COMMAND_TYPE_BUZZER_ON, null);
+            queueCommand(command);
+        }
+    }
+
+    public void stopBuzzer() {
+        if (isBtConnected()) {
+            LockerCommand command = new LockerCommand(LockerCommand.COMMAND_TYPE_BUZZER_OFF, null);
+            queueCommand(command);
+        }
+    }
+
     /**
      * Constant loop and check whether the current command expired by compare the command's sent time and now.
      * If the current command expired, remove it and send the next command in queue to the board.
