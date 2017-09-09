@@ -221,7 +221,7 @@ public class MainActivity extends AppCompatActivity {
     }
 
     public void onStopBuzzer(View view){
-        mLockerManager.startBuzzer();
+        mLockerManager.stopBuzzer();
     }
 
     @Override
