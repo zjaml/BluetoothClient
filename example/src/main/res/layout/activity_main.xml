@@ -45,6 +45,18 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:onClick="onRequestDischarging"/>
+        <Button
+            android:id="@+id/buzzer_btn"
+            android:text="Buzzer On"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:onClick="onStartBuzzer"/>
+        <Button
+            android:id="@+id/buzzer_off_btn"
+            android:text="Buzzer Off"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:onClick="onStopBuzzer"/>
         </com.wefika.flowlayout.FlowLayout>
     </LinearLayout>
 
