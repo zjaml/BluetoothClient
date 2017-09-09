@@ -216,6 +216,14 @@ public class MainActivity extends AppCompatActivity {
         mLockerManager = null;
     }
 
+    public void onStartBuzzer(View view){
+        mLockerManager.startBuzzer();
+    }
+
+    public void onStopBuzzer(View view){
+        mLockerManager.startBuzzer();
+    }
+
     @Override
     protected void onResume() {
         super.onResume();

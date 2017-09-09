@@ -18,6 +18,8 @@ public class LockerResponse {
     public static final String RESPONSE_TYPE_BOX_STATUS = "B";
     public static final String RESPONSE_TYPE_CHARGING = "C";
     public static final String RESPONSE_TYPE_DISCHARGING = "D";
+    public static final String RESPONSE_TYPE_BUZZER_ON = "Y";
+    public static final String RESPONSE_TYPE_BUZZER_OFF = "Z";
 
     public static final String RESPONSE_PATTERN = "(\\d{2}):(\\w)(.*)";
 
