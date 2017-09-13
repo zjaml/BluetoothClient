@@ -66,7 +66,7 @@ public class LockerCommand {
     public boolean expired() {
         long now = new Date().getTime();
         long sent = _sent.getTime();
-        return sent + _lifeSpanInSeconds * COMMAND_MAX_DURATION > now;
+        return sent + _lifeSpanInSeconds * COMMAND_MAX_DURATION < now;
     }
 
     @Override
