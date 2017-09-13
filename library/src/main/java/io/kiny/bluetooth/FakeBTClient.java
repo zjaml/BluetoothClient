@@ -172,6 +172,17 @@ public class FakeBTClient implements BluetoothClientInterface {
                             mHandler.obtainMessage(Constants.MESSAGE_INCOMING_MESSAGE, response.toString()).sendToTarget();
                             break;
                         }
+                        case LockerCommand.COMMAND_TYPE_BUZZER_ON: {
+                            LockerResponse response = new LockerResponse(currentCommand.getId(), LockerResponse.RESPONSE_TYPE_BUZZER_ON, null);
+                            mHandler.obtainMessage(Constants.MESSAGE_INCOMING_MESSAGE, response.toString()).sendToTarget();
+                            break;
+                        }
+                        case LockerCommand.COMMAND_TYPE_BUZZER_OFF: {
+                            LockerResponse response = new LockerResponse(currentCommand.getId(), LockerResponse.RESPONSE_TYPE_BUZZER_OFF, null);
+                            mHandler.obtainMessage(Constants.MESSAGE_INCOMING_MESSAGE, response.toString()).sendToTarget();
+                            break;
+                        }
+
                     }
                 } catch (InterruptedException e) {
                     e.printStackTrace();
