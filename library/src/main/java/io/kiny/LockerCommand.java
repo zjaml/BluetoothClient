@@ -16,6 +16,8 @@ public class LockerCommand {
     public static final String COMMAND_TYPE_BOX_STATUS = "B";
     public static final String COMMAND_TYPE_DISCHARGE = "H";
     public static final String COMMAND_TYPE_CHARGE = "L";
+    public static final String COMMAND_TYPE_BUZZER_ON = "Y";
+    public static final String COMMAND_TYPE_BUZZER_OFF = "Z";
     public static final int COMMAND_MAX_DURATION = 2000;
 
     private static int counter = 0;
