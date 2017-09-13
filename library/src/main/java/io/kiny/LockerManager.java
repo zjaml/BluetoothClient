@@ -66,7 +66,6 @@ public class LockerManager {
                     // Dequeue the current command if its ID matches the command ID in the response.
                     // If ack is received after a check in/ checkout command, mark the door as open.
                     // If the queue becomes empty, and there's open door, enqueue a door query command for the opened doors.
-                    LockerCommand currentCommand = commandQueue.peek();
                     if (message.matches(LockerResponse.RESPONSE_PATTERN)) {
                         try {
                             LockerResponse response = new LockerResponse(message);
@@ -83,6 +82,7 @@ public class LockerManager {
                             if (boxStatusList != null && boxStatusList.size() > 0) {
                                 updateBoxStatus(boxStatusList);
                             }
+                            LockerCommand currentCommand = commandQueue.peek();
                             if (currentCommand != null && Objects.equals(response.getId(), currentCommand.getId())) {
                                 //remove the current command and dequeue
                                 commandQueue.poll();
@@ -94,7 +94,7 @@ public class LockerManager {
                         }
                         // continue to query status for open doors.
                         List<String> openBoxes = getOpenBoxes();
-                        if (currentCommand == null && openBoxes.size() > 0) {
+                        if (commandQueue.size() == 0 && openBoxes.size() > 0) {
                             queueCommand(new LockerCommand(LockerCommand.COMMAND_TYPE_BOX_STATUS, openBoxes));
                         }
                     }
