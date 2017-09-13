@@ -38,7 +38,6 @@ public class LockerManager {
     private Map<String, BoxStatus> boxStatusMap = null;
     //    private static List<BoxStatus> boxStatusList = null;
     private Queue<LockerCommand> commandQueue;
-    private LockerCommand currentCommand = null;
     private CommanderThread commanderThread = null;
 
     private class LockerResponseHandler extends Handler {
@@ -67,6 +66,7 @@ public class LockerManager {
                     // Dequeue the current command if its ID matches the command ID in the response.
                     // If ack is received after a check in/ checkout command, mark the door as open.
                     // If the queue becomes empty, and there's open door, enqueue a door query command for the opened doors.
+                    LockerCommand currentCommand = commandQueue.peek();
                     if (message.matches(LockerResponse.RESPONSE_PATTERN)) {
                         try {
                             LockerResponse response = new LockerResponse(message);
@@ -85,7 +85,7 @@ public class LockerManager {
                             }
                             if (currentCommand != null && Objects.equals(response.getId(), currentCommand.getId())) {
                                 //remove the current command and dequeue
-                                currentCommand = commandQueue.poll();
+                                commandQueue.poll();
                             }
                         } catch (InvalidLockerResponseException e) {
                             if (_callback != null) {
@@ -180,7 +180,6 @@ public class LockerManager {
         // clear open doors so that the next time it gets connected, it will re-query the door status.
         boxStatusMap = null;
         _handler = null;
-        currentCommand = null;
         if (commanderThread != null) {
             commanderThread.cancel();
             commanderThread = null;
@@ -197,11 +196,7 @@ public class LockerManager {
 
     private synchronized void queueCommand(LockerCommand command) {
         //using synchronized to protect currentCommand
-        if (currentCommand == null) {
-            currentCommand = command;
-        } else {
-            commandQueue.offer(command);
-        }
+        commandQueue.offer(command);
     }
 
     public boolean isReady() {
@@ -285,11 +280,13 @@ public class LockerManager {
         public void run() {
             while (!mmStopSignal) {
                 try {
+                    LockerCommand currentCommand = commandQueue.peek();
                     if (currentCommand != null) {
                         if (currentCommand.getSent() == null) {
                             sendCommand(currentCommand);
                         } else if (currentCommand.expired()) {
-                            currentCommand = commandQueue.poll();
+                            commandQueue.poll();
+                            currentCommand = commandQueue.peek();
                             if (currentCommand != null)
                                 sendCommand(currentCommand);
                         }
