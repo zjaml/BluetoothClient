@@ -57,9 +57,9 @@ public class MainActivity extends AppCompatActivity {
                     int scale = intent.getIntExtra(BatteryManager.EXTRA_SCALE, -1);
                     float batteryPct = level / (float) scale;
                     LoggerUtil.d(this.getClass().getSimpleName(), String.format(Locale.US, "Battery: %.0f%%", batteryPct * 100));
-                    if (batteryPct < 0.5 && !charging) {
+                    if (batteryPct < 0.2 && !charging) {
                         mLockerManager.requestToCharge();
-                    } else if (batteryPct > 0.55 && charging) {
+                    } else if (batteryPct > 0.95 && charging) {
                         mLockerManager.requestToDischarge();
                     }
             }
