@@ -55,6 +55,11 @@ public class LockerManager {
                 }
                 case Constants.MESSAGE_CONNECTED: {
                     LoggerUtil.d(this.getClass().getSimpleName(), "connected");
+                    try {
+                        Thread.sleep(1000); // when the locker just started up, it needs some time to get ready.
+                    } catch (InterruptedException e) {
+                        e.printStackTrace();
+                    }
                     queryBoxStatus(null);
                     if (_callback != null)
                         _callback.connected();
